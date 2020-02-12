@@ -1,0 +1,9 @@
+#define PORT_PRINT_VALUE 0xE7
+#define PORT_DISPLAY_STRING 0xE8
+#define PORT_GET_EXITS 0xE9
+#define PORT_OPEN 0xF0
+#define PORT_READ 0xF1
+#define PORT_WRITE 0xF2
+#define PORT_SEEK 0xF3
+#define PORT_CLOSE 0xF4
+#define MAX_FDS 64

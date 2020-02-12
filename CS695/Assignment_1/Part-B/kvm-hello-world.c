@@ -10,6 +10,9 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+#include "constants.h"
+#include "structures.h"
+
 /* CR0 bits */
 #define CR0_PE 1u
 #define CR0_MP (1U << 1)
@@ -88,7 +91,7 @@ void vm_init(struct vm *vm, size_t mem_size) {
 
   if (api_ver != KVM_API_VERSION) {
     fprintf(stderr, "Got KVM api version %d, expected %d\n", api_ver,
-            KVM_API_VERSION);
+	    KVM_API_VERSION);
     exit(1);
   }
 
@@ -104,7 +107,7 @@ void vm_init(struct vm *vm, size_t mem_size) {
   }
 
   vm->mem = mmap(NULL, mem_size, PROT_READ | PROT_WRITE,
-                 MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+		 MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
   if (vm->mem == MAP_FAILED) {
     perror("mmap mem");
     exit(1);
@@ -144,7 +147,7 @@ void vcpu_init(struct vm *vm, struct vcpu *vcpu) {
   }
 
   vcpu->kvm_run = mmap(NULL, vcpu_mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED,
-                       vcpu->fd, 0);
+		       vcpu->fd, 0);
   if (vcpu->kvm_run == MAP_FAILED) {
     perror("mmap kvm_run");
     exit(1);
@@ -160,6 +163,12 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
   struct kvm_regs regs;
   uint64_t memval = 0;
   uint32_t mNumOfExits = 0;
+  int fds[MAX_FDS];
+  int open_fd_count = 0;
+
+  open_params *curr_open_params;
+  read_write_params *curr_read_write_params;
+  seek_params *curr_seek_params;
 
   for (;;) {
     if (ioctl(vcpu->fd, KVM_RUN, 0) < 0) {
@@ -169,48 +178,94 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
 
     switch (vcpu->kvm_run->exit_reason) {
       case KVM_EXIT_HLT:
-        mNumOfExits++;
-        goto check;
+	mNumOfExits++;
+	goto check;
 
       case KVM_EXIT_IO:
-        mNumOfExits++;
-        if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
-            vcpu->kvm_run->io.port == 0xE7) {
-          // handle printval function from guest.c here
-          //   printf("Host: printfval called: numOfExits: %u\n", mNumOfExits);
-          char *ptr = (char *)vcpu->kvm_run + vcpu->kvm_run->io.data_offset;
-          uint32_t *numptr = (uint32_t *)ptr;
-          printf("%u\n", *numptr);
-        } else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
-                   vcpu->kvm_run->io.port ==
-                       0xE8) {  // handle display function from guest.c here
-          //   printf("Host: display called: numOfExits: %u\n", mNumOfExits);
-          uint32_t *ptr = (uint32_t *)((char *)vcpu->kvm_run +
-                                       vcpu->kvm_run->io.data_offset);
-          uintptr_t val = *ptr;
-          printf("%s", &vm->mem[val]);
-        } else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_IN &&
-                   vcpu->kvm_run->io.port ==
-                       0xE9) {  // handle getNumExits function from guest.c
-                                // here
-          //   printf("Host: getNumExits called: numOfExits: %u\n",
-          //   mNumOfExits);
-          uint32_t *ptr = (uint32_t *)((char *)vcpu->kvm_run +
-                                       vcpu->kvm_run->io.data_offset);
+	mNumOfExits++;
+	if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
+	    vcpu->kvm_run->io.port == PORT_PRINT_VALUE) {
+	  // handle printval function from guest.c here
+	  // printf("Host: printfval called: numOfExits: %u\n", mNumOfExits);
+	  char *ptr = (char *)vcpu->kvm_run + vcpu->kvm_run->io.data_offset;
+	  uint32_t *numptr = (uint32_t *)ptr;
+	  printf("%u\n", *numptr);
+	} else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
+		   vcpu->kvm_run->io.port == PORT_DISPLAY_STRING) {
+	  // handle display function from guest.c here
+	  // printf("Host: display called: numOfExits: %u\n", mNumOfExits);
+	  uint32_t *ptr = (uint32_t *)((char *)vcpu->kvm_run +
+				       vcpu->kvm_run->io.data_offset);
+	  uintptr_t val = *ptr;
+	  printf("%s", &vm->mem[val]);
+	} else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_IN &&
+		   vcpu->kvm_run->io.port == PORT_GET_EXITS) {
+	  // handle getNumExits function from guest.c here
+	  // printf("Host: getNumExits called: numOfExits: %u\n", mNumOfExits);
+	  uint32_t *ptr = (uint32_t *)((char *)vcpu->kvm_run +
+				       vcpu->kvm_run->io.data_offset);
+	  *ptr = mNumOfExits;
+	} else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
+		   vcpu->kvm_run->io.port == PORT_OPEN) {
+	  // handle open::out function from guest.c here
+	  printf("Host: open::out called");
+	  uint32_t *ptr = (uint32_t *)((char *)vcpu->kvm_run +
+				       vcpu->kvm_run->io.data_offset);
+	  curr_open_params = (void *)*ptr;
+	  printf("curr_open_params->pathname: %s", curr_open_params->pathname);
+	  printf("curr_open_params->flags:%d", curr_open_params->flags);
+	  printf("curr_open_params->mode: %d", curr_open_params->mode);
 
-          *ptr = mNumOfExits;
-        }
-        break;
-        /* fall through */
+	} else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_IN &&
+		   vcpu->kvm_run->io.port == PORT_OPEN) {
+	  // handle open::in function from guest.c here
+	  printf("Host: open::in called");
+	  uint32_t *ptr = (uint32_t *)((char *)vcpu->kvm_run +
+				       vcpu->kvm_run->io.data_offset);
+	  *ptr = open(curr_open_params->pathname, curr_open_params->flags);
+
+	} else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
+		   vcpu->kvm_run->io.port == PORT_READ) {
+	  // handle read function from guest.c here
+	  // printf("Host: read called);
+	  uint32_t *ptr = (uint32_t *)((char *)vcpu->kvm_run +
+				       vcpu->kvm_run->io.data_offset);
+	  *ptr = mNumOfExits;
+	} else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
+		   vcpu->kvm_run->io.port == PORT_WRITE) {
+	  // handle write function from guest.c here
+	  // printf("Host: write called);
+	  uint32_t *ptr = (uint32_t *)((char *)vcpu->kvm_run +
+				       vcpu->kvm_run->io.data_offset);
+	  *ptr = mNumOfExits;
+	} else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
+		   vcpu->kvm_run->io.port == PORT_SEEK) {
+	  // handle seek function from guest.c here
+	  // printf("Host: seek called);
+	  uint32_t *ptr = (uint32_t *)((char *)vcpu->kvm_run +
+				       vcpu->kvm_run->io.data_offset);
+	  *ptr = mNumOfExits;
+	} else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
+		   vcpu->kvm_run->io.port == PORT_CLOSE) {
+	  // handle close function from guest.c here
+	  // printf("Host: close called);
+	  int *ptr =
+	      (int *)((char *)vcpu->kvm_run + vcpu->kvm_run->io.data_offset);
+	  printf("Close called: fd: %d and returned %d", *ptr,
+		 hyper_close(*ptr));
+	  //   hyper_close(*ptr);
+	}
+	break;
+	/* fall through */
       default:
-        mNumOfExits++;
-        fprintf(stderr,
-                "Got exit_reason %d,"
-                " expected KVM_EXIT_HLT (%d)\n",
-                vcpu->kvm_run->exit_reason, KVM_EXIT_HLT);
-        close(vm->fd);
-        close(vm->sys_fd);
-        exit(1);
+	mNumOfExits++;
+	fprintf(stderr,
+		"Got exit_reason %d,"
+		" expected KVM_EXIT_HLT (%d)\n",
+		vcpu->kvm_run->exit_reason, KVM_EXIT_HLT);
+	close(vm->fd);
+	close(vm->sys_fd);
+	exit(1);
     }
   }
 check:
@@ -227,7 +282,7 @@ check:
   memcpy(&memval, &vm->mem[0x400], sz);
   if (memval != 42) {
     printf("Wrong result: memory at 0x400 is %lld\n",
-           (unsigned long long)memval);
+	   (unsigned long long)memval);
     return 0;
   }
 
@@ -466,24 +521,24 @@ int main(int argc, char **argv) {
   while ((opt = getopt(argc, argv, "rspl")) != -1) {
     switch (opt) {
       case 'r':
-        mode = REAL_MODE;
-        break;
+	mode = REAL_MODE;
+	break;
 
       case 's':
-        mode = PROTECTED_MODE;
-        break;
+	mode = PROTECTED_MODE;
+	break;
 
       case 'p':
-        mode = PAGED_32BIT_MODE;
-        break;
+	mode = PAGED_32BIT_MODE;
+	break;
 
       case 'l':
-        mode = LONG_MODE;
-        break;
+	mode = LONG_MODE;
+	break;
 
       default:
-        fprintf(stderr, "Usage: %s [ -r | -s | -p | -l ]\n", argv[0]);
-        return 1;
+	fprintf(stderr, "Usage: %s [ -r | -s | -p | -l ]\n", argv[0]);
+	return 1;
     }
   }
 
@@ -503,6 +558,23 @@ int main(int argc, char **argv) {
     case LONG_MODE:
       return !run_long_mode(&vm, &vcpu);
   }
-
   return 1;
 }
+
+int hyper_open(const char *pathname, int flags) {
+  int fd = open(pathname, flags);
+  return fd;
+}
+int hyper_write(int fd, void *buf, size_t count) {
+  return write(fd, buf, count);
+}
+
+ssize_t hyper_read(int fd, void *buf, size_t count) {
+  return read(fd, buf, count);
+}
+
+int hyper_close(int fd) { return close(fd); }
+
+// int hyper_seek(int fd, long offset, int origin) {
+//   return fseek(fd, offset, origin);
+// }
