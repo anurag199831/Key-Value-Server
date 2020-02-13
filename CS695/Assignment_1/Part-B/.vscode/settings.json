@@ -3,6 +3,7 @@
         "structures.h": "c",
         "fcntl.h": "c",
         "types.h": "c",
-        "stddef.h": "c"
+        "stddef.h": "c",
+        "unistd.h": "c"
     }
 }

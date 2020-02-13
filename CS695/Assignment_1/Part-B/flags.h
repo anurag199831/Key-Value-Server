@@ -44,3 +44,15 @@
 #ifndef O_CLOEXEC
 #define O_CLOEXEC 02000000 /* set close_on_exec */
 #endif
+
+#define EOF (-1)
+
+/* The possibilities for the third argument to `fseek'.
+   These values should not be changed.  */
+#define SEEK_SET 0 /* Seek from beginning of file.  */
+#define SEEK_CUR 1 /* Seek from current position.  */
+#define SEEK_END 2 /* Seek from end of file.  */
+#ifdef __USE_GNU
+#define SEEK_DATA 3 /* Seek to next data.  */
+#define SEEK_HOLE 4 /* Seek to next hole.  */
+#endif

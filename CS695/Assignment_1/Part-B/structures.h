@@ -13,5 +13,5 @@ typedef struct {
 typedef struct {
   int fd;
   long offset;
-  int origin;
+  int whence;
 } seek_params;
