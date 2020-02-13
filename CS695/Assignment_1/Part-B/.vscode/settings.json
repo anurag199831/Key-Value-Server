@@ -1,5 +1,8 @@
 {
     "files.associations": {
-        "structures.h": "c"
+        "structures.h": "c",
+        "fcntl.h": "c",
+        "types.h": "c",
+        "stddef.h": "c"
     }
 }

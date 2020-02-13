@@ -1,14 +1,12 @@
-#include <fcntl.h>
-
 typedef struct {
   int flags;
   char *pathname;
-  mode_t mode;
+  unsigned int mode;
 } open_params;
 
 typedef struct {
   int fd;
-  void *buf;
+  char *buf;
   size_t count;
 } read_write_params;
 
