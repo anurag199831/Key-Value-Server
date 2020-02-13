@@ -82,8 +82,12 @@ int hyper_write(int fd, void *buf, size_t count) {
   return write(fd, buf, count);
 }
 
-ssize_t hyper_read(int fd, void *buf, size_t count) {
+long hyper_read(int fd, void *buf, size_t count) {
   return read(fd, buf, count);
+}
+
+long hyper_seek(int fd, long offset, int whence) {
+  return lseek(fd, offset, whence);
 }
 
 int hyper_close(int fd) { return close(fd); }
@@ -301,17 +305,19 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
         } else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_IN &&
                    vcpu->kvm_run->io.port == PORT_WRITE) {
           // handle seek function from guest.c here
-          printf("Host: write::in called");
-          // uint32_t *ptr = (uint32_t *)((char *)vcpu->kvm_run +
-          //                              vcpu->kvm_run->io.data_offset);
-
+          printf("Host: write::in called\n");
+          uint32_t *ptr = (uint32_t *)((uint8_t *)vcpu->kvm_run +
+                                       vcpu->kvm_run->io.data_offset);
+          *ptr =
+              hyper_write(recv_read_write_params.fd, recv_read_write_params.buf,
+                          recv_read_write_params.count);
         } else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
                    vcpu->kvm_run->io.port == PORT_CLOSE) {
           // handle close function from guest.c here
           // printf("Host: close called);
           int *ptr =
               (int *)((char *)vcpu->kvm_run + vcpu->kvm_run->io.data_offset);
-          printf("Close called: fd: %d and returned %d", *ptr,
+          printf("Host: Close called: fd: %d and returned %d", *ptr,
                  hyper_close(*ptr));
           //   hyper_close(*ptr);
         }
@@ -602,7 +608,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  vm_init(&vm, 33554432);
+  vm_init(&vm, 0x200000);
   vcpu_init(&vm, &vcpu);
 
   switch (mode) {
@@ -620,7 +626,3 @@ int main(int argc, char **argv) {
   }
   return 1;
 }
-
-// int hyper_seek(int fd, long offset, int origin) {
-//   return fseek(fd, offset, origin);
-// }

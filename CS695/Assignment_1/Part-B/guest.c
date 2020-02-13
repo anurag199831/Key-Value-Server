@@ -60,13 +60,29 @@ void __attribute__((noreturn)) __attribute__((section(".start"))) _start(void) {
   numExits = getNumExits(PORT_GET_EXITS);
   printVal(numExits);
 
-  char buff[4096] = "Fuck\n";
-  int fd = file_open("test", O_CREAT | O_RDWR);
-  file_read(fd, buff, 250);
+  char buff[4096];
+  int fd, count_read, count_write;
+
+  fd = file_open("test", O_CREAT | O_RDWR);
   display("guest: fd: ");
   printVal(fd);
+
+  count_read = file_read(fd, buff, 250);
+  display("guest: count_read: ");
+  printVal(count_read);
   display(buff);
-  fd = fd * 3;
+
+  int i = 0;
+  for (char *p = "Fuck this fake shit!"; *p; p++, i++) {
+    buff[i] = *p;
+  }
+
+  count_write = file_write(fd, buff, 50);
+  display("guest: count_write: ");
+  printVal(count_write);
+  display(buff);
+
+  file_close(fd);
 
   *(long *)0x400 = 42;
   for (;;) asm("hlt" : /* empty */ : "a"(42) : "memory");
