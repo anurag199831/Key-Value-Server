@@ -12,6 +12,10 @@ static inline int32_t inl(uint16_t port) {
   return ret;
 }
 
+static inline void outb(uint16_t port, int32_t value) {
+  asm volatile("outl %0,%1" : /* empty */ : "a"(value), "Nd"(port) : "memory");
+}
+
 static inline void outl(uint16_t port, int32_t value) {
   asm volatile("outl %0,%1" : /* empty */ : "a"(value), "Nd"(port) : "memory");
 }
@@ -90,53 +94,86 @@ int file_seek(int fd, long offset, int whence) {
   return inl(PORT_SEEK);
 }
 
+static inline void print_error(const char *tag) {
+  display("guest:");
+  display(tag);
+  display(" : Error Occured");
+}
+
 void __attribute__((noreturn)) __attribute__((section(".start"))) _start(void) {
-  int32_t numExits;
-  numExits = getNumExits(PORT_GET_EXITS);
+  const char *p;
+
+  int numExits_before = getNumExits(PORT_GET_EXITS);
+  for (p = "Hello, world!\n"; *p; ++p) outb(0xE9, *p);
+  int numExits_after = getNumExits(PORT_GET_EXITS);
+
+  display("Q8.4 - Exits required to print \"Hello World!\\n\" are ");
+  printVal(numExits_after - numExits_before - 1);
+
+  numExits_before = getNumExits(PORT_GET_EXITS);
   display("Greetings from VM\n");
-  numExits = getNumExits(PORT_GET_EXITS);
-  printVal(numExits);
+  numExits_after = getNumExits(PORT_GET_EXITS);
+
+  display("Exits required to print \"Greetings form VM\\n\" are ");
+  printVal(numExits_after - numExits_before - 1);
 
   char buff[MAX_BUFF_SIZE];
-  int fd, count_read, count_write, count_seek, closed_fd;
+  int fd1, fd2, count_read, closed_fd;
+  // int count_write, count_seek;
 
-  fd = file_open("test", O_RDWR);
-  display("guest: fd: ");
-  printVal(fd);
+  fd1 = file_open("test1.txt", O_RDWR);
+  // display("guest: fd: ");
+  // printVal(fd1);
+  if (fd1 < 0) print_error("open");
 
-  count_read = file_read(fd, buff, 17);
-  display("guest: count_read: ");
-  printVal(count_read);
+  count_read = file_read(fd1, buff, 17);
+  if (count_read < 0) print_error("read");
+  // display("guest: count_read: ");
+  // printVal(count_read);
   display(buff);
 
-  int i = 0;
+  // int i = 0;
 
-  while (i < MAX_BUFF_SIZE) {
-    buff[i++] = '\0';
-  }
+  // while (i < MAX_BUFF_SIZE) {
+  //   buff[i++] = '\0';
+  // }
 
-  i = 0;
-  for (char *p = " Chaudhary"; *p != '\0'; p++, i++) {
-    buff[i] = *p;
-  }
+  // i = 0;
+  // for (char *p = " Chaudhary"; *p != '\0'; p++, i++) {
+  //   buff[i] = *p;
+  // }
 
-  count_write = file_write(fd, buff, 10);
-  display("guest: count_write: ");
-  printVal(count_write);
+  // count_write = file_write(fd, buff, 10);
+  // display("guest: count_write: ");
+  // printVal(count_write);
+  // display(buff);
+
+  // count_seek = file_seek(fd, 0, SEEK_SET);
+  // display("guest: count_seek: ");
+  // printVal(count_seek);
+
+  fd2 = file_open("test2.txt", O_RDWR);
+  if (fd2 < 0) print_error("open");
+  // display("guest: fd: ");
+  // printVal(fd2);
+
+  count_read = file_read(fd2, buff, 50);
+  if (count_read < 0) print_error("read");
+  // display("guest: count_read: ");
+  // printVal(count_read);
   display(buff);
 
-  count_seek = file_seek(fd, 0, SEEK_SET);
-  display("guest: count_seek: ");
-  printVal(count_seek);
+  closed_fd = file_close(fd2);
+  if (closed_fd < 0) print_error("close");
+  // display("guest: close returned: ");
+  // printVal(closed_fd);
 
-  count_read = file_read(fd, buff, 50);
-  display("guest: count_read: ");
-  printVal(count_read);
-  display(buff);
+  closed_fd = file_close(fd1);
+  if (closed_fd < 0) print_error("close");
+  // display("guest: close returned: ");
+  // printVal(closed_fd);
 
-  closed_fd = file_close(fd);
-  display("guest: close returned: ");
-  printVal(closed_fd);
+  // Q8.1 The number 42 is written here
   *(long *)0x400 = 42;
   for (;;) asm("hlt" : /* empty */ : "a"(42) : "memory");
 }
