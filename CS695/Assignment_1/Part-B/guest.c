@@ -5,42 +5,45 @@
 #include "flags.h"
 #include "structures.h"
 
-static inline uint32_t inl(uint16_t port) {
-  uint32_t ret;
+static inline int32_t inl(uint16_t port) {
+  int32_t ret;
   asm volatile("inl %1, %0" : "=a"(ret) : "Nd"(port) : "memory");
   return ret;
 }
 
-static inline void outl(uint16_t port, uint32_t value) {
+static inline void outl(uint16_t port, int32_t value) {
   asm volatile("outl %0,%1" : /* empty */ : "a"(value), "Nd"(port) : "memory");
 }
 
-void printVal(uint32_t val) { outl(PORT_PRINT_VALUE, val); }
+void printVal(int32_t val) { outl(PORT_PRINT_VALUE, val); }
 
 void display(const char *str) {
-  uint32_t strptr = (uintptr_t)str;
-  outl(PORT_DISPLAY_STRING, (uint32_t)strptr);
+  int32_t strptr = (intptr_t)str;
+  outl(PORT_DISPLAY_STRING, (int32_t)strptr);
 }
 
-uint32_t getNumExits(uint16_t port) { return inl(port); }
+int32_t getNumExits(uint16_t port) { return inl(port); }
 
 int file_open(char *pathname, int flags) {
   open_params parameters;
   parameters.pathname = pathname;
   parameters.flags = flags;
   parameters.mode = -1;
-  outl(PORT_OPEN, (uint32_t)(uintptr_t)&parameters);
+  outl(PORT_OPEN, (int32_t)(intptr_t)&parameters);
   return inl(PORT_OPEN);
 }
 
-void file_close(int fd) { outl(PORT_CLOSE, (uint32_t)fd); }
+int file_close(int fd) {
+  outl(PORT_CLOSE, (int32_t)fd);
+  return inl(PORT_CLOSE);
+}
 
 long file_read(int fd, void *buf, size_t count) {
   read_write_params parameters;
   parameters.fd = fd;
   parameters.count = count;
   parameters.buf = buf;
-  outl(PORT_READ, (uint32_t)(uintptr_t)&parameters);
+  outl(PORT_READ, (int32_t)(intptr_t)&parameters);
   return inl(PORT_READ);
 }
 
@@ -49,7 +52,7 @@ long file_write(int fd, void *buf, size_t count) {
   parameters.fd = fd;
   parameters.count = count;
   parameters.buf = buf;
-  outl(PORT_WRITE, (uint32_t)(uintptr_t)&parameters);
+  outl(PORT_WRITE, (int32_t)(intptr_t)&parameters);
   return inl(PORT_WRITE);
 }
 
@@ -58,7 +61,7 @@ int file_seek(int fd, long offset, int whence) {
   parameters.fd = fd;
   parameters.offset = offset;
   parameters.whence = whence;
-  outl(PORT_SEEK, (uint32_t)(uintptr_t)&parameters);
+  outl(PORT_SEEK, (int32_t)(intptr_t)&parameters);
   return inl(PORT_SEEK);
 }
 
@@ -70,7 +73,7 @@ void __attribute__((noreturn)) __attribute__((section(".start"))) _start(void) {
   printVal(numExits);
 
   char buff[MAX_BUFF_SIZE];
-  int fd, count_read, count_write, count_seek;
+  int fd, count_read, count_write, count_seek, closed_fd;
 
   fd = file_open("test", O_CREAT | O_RDWR);
   display("guest: fd: ");
@@ -106,8 +109,9 @@ void __attribute__((noreturn)) __attribute__((section(".start"))) _start(void) {
   printVal(count_read);
   display(buff);
 
-  file_close(fd);
-
+  closed_fd = file_close(fd);
+  display("guest: close returned: ");
+  printVal(closed_fd);
   *(long *)0x400 = 42;
   for (;;) asm("hlt" : /* empty */ : "a"(42) : "memory");
 }
