@@ -75,7 +75,7 @@ void __attribute__((noreturn)) __attribute__((section(".start"))) _start(void) {
   char buff[MAX_BUFF_SIZE];
   int fd, count_read, count_write, count_seek, closed_fd;
 
-  fd = file_open("~/.viminfo", O_CREAT | O_RDWR);
+  fd = file_open("test", O_CREAT | O_RDWR);
   display("guest: fd: ");
   printVal(fd);
 

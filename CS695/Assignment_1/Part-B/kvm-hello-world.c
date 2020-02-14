@@ -2,6 +2,7 @@
 #include <fcntl.h>
 #include <linux/kvm.h>
 #include <linux/mman.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -183,10 +184,11 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
   uint64_t memval = 0;
   uint32_t mNumOfExits = 0;
   int status = -1;
-  int fds[MAX_FDS];
+  bool fds[MAX_FDS];
   int open_fd_count = 0;
+
   for (int i = 0; i < MAX_FDS; i++) {
-    fds[i] = -1;
+    fds[i] = false;
   }
 
   open_params *pointer_open_params = NULL;
@@ -222,8 +224,8 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
                    vcpu->kvm_run->io.port == PORT_DISPLAY_STRING) {
           // handle display function from guest.c here
           // printf("Host: display called: numOfExits: %u\n", mNumOfExits);
-          uint32_t *ptr = (uint32_t *)((intptr_t)vcpu->kvm_run +
-                                       vcpu->kvm_run->io.data_offset);
+          int32_t *ptr = (int32_t *)((intptr_t)vcpu->kvm_run +
+                                     vcpu->kvm_run->io.data_offset);
           printf("%s", &vm->mem[*ptr]);
 
         } else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_IN &&
@@ -262,6 +264,8 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
             perror("Host: OPEN");
           } else {
             printf("Host: fd: %d\n", fd);
+            open_fd_count++;
+            fds[fd] = true;
           }
           *ptr = (int32_t)fd;
 
@@ -291,10 +295,14 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
                                      vcpu->kvm_run->io.data_offset);
           status = read(recv_read_write_params.fd, recv_read_write_params.buf,
                         recv_read_write_params.count);
-          if (status < 0) {
-            perror("Host: READ");
+          if (fds[recv_read_write_params.fd] == true) {
+            if (status < 0) {
+              perror("Host: READ");
+            }
+            *ptr = status;
+          } else {
+            *ptr = -1;
           }
-          *ptr = status;
 
         } else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
                    vcpu->kvm_run->io.port == PORT_WRITE) {
@@ -320,13 +328,17 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
           printf("Host: write::in called\n");
           int32_t *ptr = (int32_t *)((char *)vcpu->kvm_run +
                                      vcpu->kvm_run->io.data_offset);
-          status =
-              hyper_write(recv_read_write_params.fd, recv_read_write_params.buf,
-                          recv_read_write_params.count);
-          if (status < 0) {
-            perror("Host: WRITE");
+          if (fds[recv_read_write_params.fd] == true) {
+            status = hyper_write(recv_read_write_params.fd,
+                                 recv_read_write_params.buf,
+                                 recv_read_write_params.count);
+            if (status < 0) {
+              perror("Host: WRITE");
+            }
+            *ptr = status;
+          } else {
+            *ptr = -1;
           }
-          *ptr = status;
 
         } else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
                    vcpu->kvm_run->io.port == PORT_SEEK) {
@@ -369,11 +381,18 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
           printf("Host: close::in called\n");
           int32_t *ptr = (int32_t *)((char *)vcpu->kvm_run +
                                      vcpu->kvm_run->io.data_offset);
-          status = hyper_close(recv_close_fd);
-          if (status < 0) {
-            perror("Host: CLOSE");
+          if (fds[recv_close_fd] == true) {
+            status = hyper_close(recv_close_fd);
+            if (status < 0) {
+              perror("Host: CLOSE");
+            } else {
+            }
+            *ptr = status;
+            fds[recv_close_fd] = false;
+            open_fd_count--;
+          } else {
+            *ptr = -1;
           }
-          *ptr = status;
         }
         break;
         /* fall through */
@@ -383,6 +402,14 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
                 "Got exit_reason %d,"
                 " expected KVM_EXIT_HLT (%d)\n",
                 vcpu->kvm_run->exit_reason, KVM_EXIT_HLT);
+        if (open_fd_count != 0) {
+          for (int i = 0; i < MAX_FDS; i++) {
+            if (fds[i] == true) {
+              hyper_close(fds[i]);
+            }
+          }
+        }
+        open_fd_count = 0;
         close(vm->fd);
         close(vm->sys_fd);
         exit(1);
