@@ -1,3 +1,4 @@
+#include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -24,11 +25,33 @@ void display(const char *str) {
 
 int32_t getNumExits(uint16_t port) { return inl(port); }
 
-int file_open(char *pathname, int flags) {
+int file_open(char *pathname, int flags, ...) {
+  va_list valist;
+  va_start(valist, flags);
+  long mode = va_arg(valist, long);
+  switch (mode) {
+    case S_IRWXU:
+    case S_IRUSR:
+    case S_IWUSR:
+    case S_IXUSR:
+    case S_IRWXG:
+    case S_IRGRP:
+    case S_IWGRP:
+    case S_IXGRP:
+    case S_IRWXO:
+    case S_IROTH:
+    case S_IWOTH:
+    case S_IXOTH:
+      break;
+    default:
+      mode = -1;
+      break;
+  }
+  va_end(valist);
   open_params parameters;
   parameters.pathname = pathname;
   parameters.flags = flags;
-  parameters.mode = -1;
+  parameters.mode = mode;
   outl(PORT_OPEN, (int32_t)(intptr_t)&parameters);
   return inl(PORT_OPEN);
 }

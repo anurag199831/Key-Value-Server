@@ -9,6 +9,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "constants.h"
@@ -74,24 +75,24 @@ struct vm {
   char *mem;
 };
 
-int hyper_open(const char *pathname, int flags) {
+static inline int hyper_open(const char *pathname, int flags) {
   printf("%s %d", pathname, flags);
   int fd = open(pathname, flags, 0700);
   return fd;
 }
-int hyper_write(int fd, void *buf, size_t count) {
+static inline int hyper_write(int fd, void *buf, size_t count) {
   return write(fd, buf, count);
 }
 
-long hyper_read(int fd, void *buf, size_t count) {
+static inline long hyper_read(int fd, void *buf, size_t count) {
   return read(fd, buf, count);
 }
 
-long hyper_seek(int fd, long offset, int whence) {
+static inline long hyper_seek(int fd, long offset, int whence) {
   return lseek(fd, offset, whence);
 }
 
-int hyper_close(int fd) { return close(fd); }
+static inline int hyper_close(int fd) { return close(fd); }
 
 void vm_init(struct vm *vm, size_t mem_size) {
   int api_ver;

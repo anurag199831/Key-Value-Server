@@ -4,6 +4,9 @@
         "fcntl.h": "c",
         "types.h": "c",
         "stddef.h": "c",
-        "unistd.h": "c"
+        "unistd.h": "c",
+        "stat.h": "c",
+        "mman.h": "c",
+        "constants.h": "c"
     }
 }
