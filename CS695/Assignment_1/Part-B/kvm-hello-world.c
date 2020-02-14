@@ -134,7 +134,7 @@ void vm_init(struct vm *vm, size_t mem_size) {
   }
   // Q1.3  The virtual address where the memory mapped into the virtual
   // address space of this simple hypervisor is
-  printf("Q1.3 - vm->mem starts at %p\n", vm->mem);
+  // printf("Q1.3 - vm->mem starts at %p\n", vm->mem);
 
   madvise(vm->mem, mem_size, MADV_MERGEABLE);
 
@@ -169,7 +169,7 @@ void vcpu_init(struct vm *vm, struct vcpu *vcpu) {
     exit(1);
   }
   // Q2.2 Size of the VCPU struct
-  printf("Q2.2 - Size of VCPU: %d\n", vcpu_mmap_size);
+  // printf("Q2.2 - Size of VCPU: %d bytes\n", vcpu_mmap_size);
 
   // Q2.1 Memory for VCPU is allocated here.
   vcpu->kvm_run = mmap(NULL, vcpu_mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED,
@@ -179,7 +179,7 @@ void vcpu_init(struct vm *vm, struct vcpu *vcpu) {
     exit(1);
   }
   // Q2.3 It is located in the virutal address space of the hypervisor at
-  printf("Q2.3 - VCPU is located at: %p\n", vcpu->kvm_run);
+  // printf("Q2.3 - VCPU is located at: %p\n", vcpu->kvm_run);
 }
 
 // Function for assembly code for "out" instruction
@@ -209,7 +209,8 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
   int recv_close_fd = 0;
 
   for (;;) {
-    // Q6.1 The hypervisor to guest switch is done here.
+    // Q6.1 The hypervisor to guest switch is done here. using ioctl call with
+    // KVM_RUN.
     if (ioctl(vcpu->fd, KVM_RUN, 0) < 0) {
       perror("KVM_RUN");
       exit(1);
@@ -226,7 +227,7 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
         mNumOfExits++;
         if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
             vcpu->kvm_run->io.port == 0xE9) {
-          // Q7 Hello World is printed using 0xE9
+          // Q7 Hello World is printed using 0xE9 port
           char *p = (char *)vcpu->kvm_run;
           fwrite(p + vcpu->kvm_run->io.data_offset, vcpu->kvm_run->io.size, 1,
                  stdout);
@@ -451,7 +452,13 @@ check:
     return 0;
   }
 
-  // Q8.2 The value 42 is received here.
+  // Q8.2 The value 42 is received here and copied into memval.
+  // This is basically done to check that the KVM halted normally using
+  // KVM_EXIT_HLT reason, after the KVM_EXIT_HLT the number 42 is checked, if it
+  // is present in the location where it was written to in the guest. If this
+  // check is successful, the VM terminated correctly. It is kind of used like a
+  // success code.
+
   memcpy(&memval, &vm->mem[0x400], sz);
   if (memval != 42) {
     printf("Wrong result: memory at 0x400 is %lld\n",
@@ -646,27 +653,27 @@ static void setup_long_mode(struct vm *vm, struct kvm_sregs *sregs) {
   uint64_t pd_addr = 0x4000;
   uint64_t *pd = (void *)(vm->mem + pd_addr);
 
-  printf("Q3.2 - Page Tables are setup as follows:\n");
-  printf("--------------------------------------------------------\n");
-  printf("|  Type\t|\tHPA(Start)\t|\tHPA(End)       |\n");
-  printf("--------------------------------------------------------\n");
-  printf("|  pml4\t|\t%p\t|\t%p |\n", pml4, pml4 + 0xFFF);
-  printf("|  pdpt\t|\t%p\t|\t%p |\n", pdpt, pdpt + 0xFFF);
-  printf("|  pd\t|\t%p\t|\t%p |\n", pd, pd + 0xFFF);
-  printf("--------------------------------------------------------\n\n");
+  // printf("Q3.2 - Page Tables are setup as follows:\n");
+  // printf("--------------------------------------------------------\n");
+  // printf("|  Type\t|\tHVA(Start)\t|\tHPA(End)       |\n");
+  // printf("--------------------------------------------------------\n");
+  // printf("|  pml4\t|\t%p\t|\t%p |\n", pml4, pml4 + 0xFFF);
+  // printf("|  pdpt\t|\t%p\t|\t%p |\n", pdpt, pdpt + 0xFFF);
+  // printf("|  pd\t|\t%p\t|\t%p |\n", pd, pd + 0xFFF);
+  // printf("--------------------------------------------------------\n\n");
 
-  printf("----------------------------------------\n");
-  printf("|  Type\t|GPA(Start)\t|GPA(End)      |\n");
-  printf("----------------------------------------\n");
-  printf("|  pml4\t|\t0x%lx\t|\t0x%lx |\n", pml4_addr, pml4_addr + 0xFFF);
-  printf("|  pdpt\t|\t0x%lx\t|\t0x%lx |\n", pdpt_addr, pdpt_addr + 0xFFF);
-  printf("|  pd\t|\t0x%lx\t|\t0x%lx |\n", pd_addr, pd_addr + 0xFFF);
-  printf("----------------------------------------\n");
+  // printf("----------------------------------------\n");
+  // printf("|  Type\t|GPA(Start)\t|GPA(End)      |\n");
+  // printf("----------------------------------------\n");
+  // printf("|  pml4\t|\t0x%lx\t|\t0x%lx |\n", pml4_addr, pml4_addr + 0xFFF);
+  // printf("|  pdpt\t|\t0x%lx\t|\t0x%lx |\n", pdpt_addr, pdpt_addr + 0xFFF);
+  // printf("|  pd\t|\t0x%lx\t|\t0x%lx |\n", pd_addr, pd_addr + 0xFFF);
+  // printf("----------------------------------------\n");
 
   // Q4.4 The page table maps the first 2MB of the guest virtual address,
   // since there is only one page of 2MB size.
 
-  // Q4.3 Guest virtual to physical page table mappings are here.
+  // Q4.3 Guest virtual to physical page table mappings are set here.
   pml4[0] = PDE64_PRESENT | PDE64_RW | PDE64_USER | pdpt_addr;
   pdpt[0] = PDE64_PRESENT | PDE64_RW | PDE64_USER | pd_addr;
   pd[0] = PDE64_PRESENT | PDE64_RW | PDE64_USER | PDE64_PS;
@@ -700,13 +707,17 @@ int run_long_mode(struct vm *vm, struct vcpu *vcpu) {
   memset(&regs, 0, sizeof(regs));
   /* Clear all FLAGS bits, except bit 1 which is always set. */
   regs.rflags = 2;
-  regs.rip = 0;  // Q5 The execution starts at 0 and is configured in rip.
+  regs.rip =
+      0;  // Q5 The execution starts at address 0 and is configured in rip.
   /* Create stack at top of 2 MB page and grow down. */
   regs.rsp = 2 << 20;  // Q3.1 Kernel stack is setup here
-  printf(
-      "Q3.2 - Kernel stack starts at 0x%llx i.e. 2MB and grows in the "
-      "direction of 0x0.\n",
-      regs.rsp);
+  // printf(
+  //     "Q3.2 - Kernel stack GPA address starts at 0x%llx i.e. 2MB and grows in
+  //     " "the direction of 0x0.\n", regs.rsp);
+  // printf(
+  //     "Q3.2 - Kernel stack HVA starts at %p and grows in the "
+  //     "direction of %p.\n",
+  //     vm->mem + regs.rsp, vm->mem);
 
   if (ioctl(vcpu->fd, KVM_SET_REGS, &regs) < 0) {
     perror("KVM_SET_REGS");
@@ -715,10 +726,10 @@ int run_long_mode(struct vm *vm, struct vcpu *vcpu) {
   // Q3.1 Guest code is setup here
   memcpy(vm->mem, guest64, guest64_end - guest64);
   // Q3.2 Guest range
-  printf("Q3.2 - Guest range: GPA is 0x%llx to 0x%llx\n", sregs.cs.base,
-         sregs.cs.base + (guest64_end - guest64));
-  printf("Q3.2 - Guest range: HPA is %p to %p\n", vm->mem,
-         vm->mem + (guest64_end - guest64));
+  // printf("Q3.2 - Guest range: GPA is 0x%llx to 0x%llx\n", sregs.cs.base,
+  //        sregs.cs.base + (guest64_end - guest64));
+  // printf("Q3.2 - Guest range: HVA is %p to %p\n", vm->mem,
+  //        vm->mem + (guest64_end - guest64));
   return run_vm(vm, vcpu, 8);
 }
 

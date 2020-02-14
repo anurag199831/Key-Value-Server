@@ -100,6 +100,13 @@ static inline void print_error(const char *tag) {
   display(" : Error Occured");
 }
 
+static inline void reset_buffer(char *buff) {
+  int i = 0;
+  while (i < MAX_BUFF_SIZE) {
+    buff[i++] = '\0';
+  }
+}
+
 void __attribute__((noreturn)) __attribute__((section(".start"))) _start(void) {
   const char *p;
 
@@ -107,73 +114,88 @@ void __attribute__((noreturn)) __attribute__((section(".start"))) _start(void) {
   for (p = "Hello, world!\n"; *p; ++p) outb(0xE9, *p);
   int numExits_after = getNumExits(PORT_GET_EXITS);
 
-  display("Q8.4 - Exits required to print \"Hello World!\\n\" are ");
+  display("Exits required to print \"Hello World!\\n\" are ");
   printVal(numExits_after - numExits_before - 1);
 
   numExits_before = getNumExits(PORT_GET_EXITS);
   display("Greetings from VM\n");
   numExits_after = getNumExits(PORT_GET_EXITS);
 
-  display("Exits required to print \"Greetings form VM\\n\" are ");
+  display(
+      "Exits required to print \"Greetings form VM\\n\", using display() are ");
   printVal(numExits_after - numExits_before - 1);
 
   char buff[MAX_BUFF_SIZE];
   int fd1, fd2, count_read, closed_fd;
-  // int count_write, count_seek;
+  int count_write;
+  // int count_seek;
+  int i = 0;
 
-  fd1 = file_open("test1.txt", O_RDWR);
-  // display("guest: fd: ");
-  // printVal(fd1);
+  reset_buffer(buff);
+
+  fd1 = file_open("test1.txt", O_CREAT | O_RDWR);
+  display("guest: fd: ");
+  printVal(fd1);
   if (fd1 < 0) print_error("open");
 
-  count_read = file_read(fd1, buff, 17);
-  if (count_read < 0) print_error("read");
+  // count_read = file_read(fd1, buff, 17);
+  // if (count_read < 0) print_error("read");
   // display("guest: count_read: ");
   // printVal(count_read);
-  display(buff);
-
-  // int i = 0;
-
-  // while (i < MAX_BUFF_SIZE) {
-  //   buff[i++] = '\0';
-  // }
-
-  // i = 0;
-  // for (char *p = " Chaudhary"; *p != '\0'; p++, i++) {
-  //   buff[i] = *p;
-  // }
-
-  // count_write = file_write(fd, buff, 10);
-  // display("guest: count_write: ");
-  // printVal(count_write);
   // display(buff);
 
-  // count_seek = file_seek(fd, 0, SEEK_SET);
-  // display("guest: count_seek: ");
-  // printVal(count_seek);
+  i = 0;
+  for (char *p = "Pranav Chaudhary"; *p != '\0'; p++, i++) {
+    buff[i] = *p;
+  }
 
-  fd2 = file_open("test2.txt", O_RDWR);
-  if (fd2 < 0) print_error("open");
-  // display("guest: fd: ");
-  // printVal(fd2);
+  count_write = file_write(fd1, buff, 16);
+  display("guest: Writing File: count_write: ");
+  printVal(count_write);
 
-  count_read = file_read(fd2, buff, 50);
+  reset_buffer(buff);
+  file_seek(fd1, 0, SEEK_SET);
+  count_read = file_read(fd1, buff, 20);
   if (count_read < 0) print_error("read");
-  // display("guest: count_read: ");
-  // printVal(count_read);
+  display("guest: Reading file :count_read: ");
+  printVal(count_read);
   display(buff);
+  display("\n");
+
+  fd2 = file_open("test2.txt", O_CREAT | O_RDWR);
+  if (fd2 < 0) print_error("open");
+  display("guest: fd: ");
+  printVal(fd2);
+
+  i = 0;
+  for (char *p = "May the force be with You!"; *p != '\0'; p++, i++) {
+    buff[i] = *p;
+  }
+
+  count_write = file_write(fd2, buff, 26);
+  display("guest:Writing File: count_write: ");
+  printVal(count_write);
+
+  reset_buffer(buff);
+  file_seek(fd2, 0, SEEK_SET);
+  count_read = file_read(fd2, buff, 30);
+  if (count_read < 0) print_error("read");
+  display("guest: Reading File: count_read: ");
+  printVal(count_read);
+  display(buff);
+  display("\n");
 
   closed_fd = file_close(fd2);
   if (closed_fd < 0) print_error("close");
-  // display("guest: close returned: ");
-  // printVal(closed_fd);
+  display("guest: close returned with status code: ");
+  printVal(closed_fd);
 
   closed_fd = file_close(fd1);
   if (closed_fd < 0) print_error("close");
-  // display("guest: close returned: ");
-  // printVal(closed_fd);
+  display("guest: close returned with status code: ");
+  printVal(closed_fd);
 
-  // Q8.1 The number 42 is written here
+  // Q8.1 The number 42 is written here to Guest virtual address 0x400.
   *(long *)0x400 = 42;
   for (;;) asm("hlt" : /* empty */ : "a"(42) : "memory");
 }
