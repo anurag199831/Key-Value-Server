@@ -360,13 +360,17 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
           printf("Host: seek::in called\n");
           int32_t *ptr = (int32_t *)((char *)vcpu->kvm_run +
                                      vcpu->kvm_run->io.data_offset);
-          status =
-              hyper_seek(pointer_seek_params->fd, pointer_seek_params->offset,
-                         pointer_seek_params->whence);
-          if (status < 0) {
-            perror("Host: SEEK");
+          if (fds[pointer_seek_params->fd] == true) {
+            status =
+                hyper_seek(pointer_seek_params->fd, pointer_seek_params->offset,
+                           pointer_seek_params->whence);
+            if (status < 0) {
+              perror("Host: SEEK");
+            }
+            *ptr = status;
+          } else {
+            *ptr = -1;
           }
-          *ptr = status;
 
         } else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
                    vcpu->kvm_run->io.port == PORT_CLOSE) {
