@@ -182,8 +182,12 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
   struct kvm_regs regs;
   uint64_t memval = 0;
   uint32_t mNumOfExits = 0;
-  // int fds[MAX_FDS];
-  // int open_fd_count = 0;
+  int status = -1;
+  int fds[MAX_FDS];
+  int open_fd_count = 0;
+  for (int i = 0; i < MAX_FDS; i++) {
+    fds[i] = -1;
+  }
 
   open_params *pointer_open_params = NULL;
   read_write_params *pointer_read_write_params = NULL;
@@ -212,7 +216,7 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
           // printf("Host: printfval called: numOfExits: %u\n", mNumOfExits);
           char *ptr = (char *)vcpu->kvm_run + vcpu->kvm_run->io.data_offset;
           int32_t *numptr = (int32_t *)ptr;
-          printf("%u\n", *numptr);
+          printf("%d\n", *numptr);
 
         } else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
                    vcpu->kvm_run->io.port == PORT_DISPLAY_STRING) {
@@ -234,15 +238,15 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
                    vcpu->kvm_run->io.port == PORT_OPEN) {
           // handle open::out function from guest.c here
           printf("Host: open::out called\n");
-          uint32_t *ptr = (uint32_t *)((char *)vcpu->kvm_run +
-                                       vcpu->kvm_run->io.data_offset);
+          int32_t *ptr = (int32_t *)((char *)vcpu->kvm_run +
+                                     vcpu->kvm_run->io.data_offset);
           pointer_open_params = (open_params *)&vm->mem[*ptr];
           printf("pointer_open_params->pathname: %s\n",
-                 &vm->mem[(uintptr_t)pointer_open_params->pathname]);
+                 &vm->mem[(intptr_t)pointer_open_params->pathname]);
           printf("pointer_open_params->flags:%d\n", pointer_open_params->flags);
           printf("pointer_open_params->mode: %d\n", pointer_open_params->mode);
           recv_open_params.pathname =
-              &vm->mem[(uintptr_t)pointer_open_params->pathname];
+              &vm->mem[(intptr_t)pointer_open_params->pathname];
           recv_open_params.flags = pointer_open_params->flags;
           recv_open_params.mode = pointer_open_params->mode;
 
@@ -254,15 +258,19 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
                                      vcpu->kvm_run->io.data_offset);
           int fd =
               hyper_open(recv_open_params.pathname, recv_open_params.flags);
+          if (fd < 0) {
+            perror("Host: OPEN");
+          } else {
+            printf("Host: fd: %d\n", fd);
+          }
           *ptr = (int32_t)fd;
-          printf("Host: fd: %d\n", fd);
 
         } else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
                    vcpu->kvm_run->io.port == PORT_READ) {
           // handle read function from guest.c here
           printf("Host: read::out called\n");
-          uint32_t *ptr = (uint32_t *)((char *)vcpu->kvm_run +
-                                       vcpu->kvm_run->io.data_offset);
+          int32_t *ptr = (int32_t *)((char *)vcpu->kvm_run +
+                                     vcpu->kvm_run->io.data_offset);
           pointer_read_write_params = (read_write_params *)&vm->mem[*ptr];
           printf("pointer_read_write_params->fd: %d\n",
                  pointer_read_write_params->fd);
@@ -273,7 +281,7 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
           recv_read_write_params.fd = pointer_read_write_params->fd;
           recv_read_write_params.count = pointer_read_write_params->count;
           recv_read_write_params.buf =
-              &vm->mem[(uintptr_t)pointer_read_write_params->buf];
+              &vm->mem[(intptr_t)pointer_read_write_params->buf];
 
         } else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_IN &&
                    vcpu->kvm_run->io.port == PORT_READ) {
@@ -281,15 +289,19 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
           printf("Host: read::in called\n");
           int32_t *ptr = (int32_t *)((char *)vcpu->kvm_run +
                                      vcpu->kvm_run->io.data_offset);
-          *ptr = read(recv_read_write_params.fd, recv_read_write_params.buf,
-                      recv_read_write_params.count);
+          status = read(recv_read_write_params.fd, recv_read_write_params.buf,
+                        recv_read_write_params.count);
+          if (status < 0) {
+            perror("Host: READ");
+          }
+          *ptr = status;
 
         } else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
                    vcpu->kvm_run->io.port == PORT_WRITE) {
           // handle write::out function from guest.c here
           printf("Host: write::out called\n");
-          uint32_t *ptr = (uint32_t *)((char *)vcpu->kvm_run +
-                                       vcpu->kvm_run->io.data_offset);
+          int32_t *ptr = (int32_t *)((char *)vcpu->kvm_run +
+                                     vcpu->kvm_run->io.data_offset);
           pointer_read_write_params = (read_write_params *)&vm->mem[*ptr];
           printf("pointer_read_write_params->fd: %d\n",
                  pointer_read_write_params->fd);
@@ -300,7 +312,7 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
           recv_read_write_params.fd = pointer_read_write_params->fd;
           recv_read_write_params.count = pointer_read_write_params->count;
           recv_read_write_params.buf =
-              &vm->mem[(uintptr_t)pointer_read_write_params->buf];
+              &vm->mem[(intptr_t)pointer_read_write_params->buf];
 
         } else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_IN &&
                    vcpu->kvm_run->io.port == PORT_WRITE) {
@@ -308,16 +320,20 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
           printf("Host: write::in called\n");
           int32_t *ptr = (int32_t *)((char *)vcpu->kvm_run +
                                      vcpu->kvm_run->io.data_offset);
-          *ptr =
+          status =
               hyper_write(recv_read_write_params.fd, recv_read_write_params.buf,
                           recv_read_write_params.count);
+          if (status < 0) {
+            perror("Host: WRITE");
+          }
+          *ptr = status;
 
         } else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
                    vcpu->kvm_run->io.port == PORT_SEEK) {
           // handle seek::out function from guest.c here
           printf("Host: seek::out called\n");
-          uint32_t *ptr = (uint32_t *)((char *)vcpu->kvm_run +
-                                       vcpu->kvm_run->io.data_offset);
+          int32_t *ptr = (int32_t *)((char *)vcpu->kvm_run +
+                                     vcpu->kvm_run->io.data_offset);
           pointer_seek_params = (seek_params *)&vm->mem[*ptr];
           printf("pointer_seek_params->fd: %d\n", pointer_seek_params->fd);
           printf("pointer_seek_params->whence:%d\n",
@@ -331,9 +347,13 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
           printf("Host: seek::in called\n");
           int32_t *ptr = (int32_t *)((char *)vcpu->kvm_run +
                                      vcpu->kvm_run->io.data_offset);
-          *ptr =
+          status =
               hyper_seek(pointer_seek_params->fd, pointer_seek_params->offset,
                          pointer_seek_params->whence);
+          if (status < 0) {
+            perror("Host: SEEK");
+          }
+          *ptr = status;
 
         } else if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
                    vcpu->kvm_run->io.port == PORT_CLOSE) {
@@ -349,7 +369,11 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
           printf("Host: close::in called\n");
           int32_t *ptr = (int32_t *)((char *)vcpu->kvm_run +
                                      vcpu->kvm_run->io.data_offset);
-          *ptr = hyper_close(*ptr);
+          status = hyper_close(recv_close_fd);
+          if (status < 0) {
+            perror("Host: CLOSE");
+          }
+          *ptr = status;
         }
         break;
         /* fall through */

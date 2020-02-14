@@ -6,5 +6,5 @@
 #define PORT_WRITE 0xFF2
 #define PORT_SEEK 0xFF3
 #define PORT_CLOSE 0xFF4
-#define MAX_FDS 64
+#define MAX_FDS 2048
 #define MAX_BUFF_SIZE 4096
