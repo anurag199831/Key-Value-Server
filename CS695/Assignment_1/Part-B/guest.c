@@ -47,6 +47,8 @@ int file_open(char *pathname, int flags, ...) {
       mode = -1;
       break;
   }
+  // display("guest: mode: ");
+  // printVal(mode);
   va_end(valist);
   open_params parameters;
   parameters.pathname = pathname;
@@ -98,11 +100,11 @@ void __attribute__((noreturn)) __attribute__((section(".start"))) _start(void) {
   char buff[MAX_BUFF_SIZE];
   int fd, count_read, count_write, count_seek, closed_fd;
 
-  fd = file_open("test", O_CREAT | O_RDWR);
+  fd = file_open("test", O_RDWR);
   display("guest: fd: ");
   printVal(fd);
 
-  count_read = file_read(fd, buff, 50);
+  count_read = file_read(fd, buff, 17);
   display("guest: count_read: ");
   printVal(count_read);
   display(buff);
@@ -114,11 +116,11 @@ void __attribute__((noreturn)) __attribute__((section(".start"))) _start(void) {
   }
 
   i = 0;
-  for (char *p = "Fuck this fake shit!\n"; *p != '\0'; p++, i++) {
+  for (char *p = " Chaudhary"; *p != '\0'; p++, i++) {
     buff[i] = *p;
   }
 
-  count_write = file_write(fd, buff, 21);
+  count_write = file_write(fd, buff, 10);
   display("guest: count_write: ");
   printVal(count_write);
   display(buff);
