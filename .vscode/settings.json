@@ -1,0 +1,20 @@
+{
+    "files.associations": {
+        "iostream": "cpp",
+        "string": "cpp",
+        "fstream": "cpp",
+        "istream": "cpp",
+        "new": "cpp",
+        "ostream": "cpp",
+        "sstream": "cpp",
+        "functional": "cpp",
+        "typeinfo": "cpp"
+    },
+    "C_Cpp.clang_format_sortIncludes": true,
+    "C_Cpp.formatting": "Default",
+    "C_Cpp.default.cStandard": "c11",
+    "C_Cpp.default.cppStandard": "c++14",
+    "editor.formatOnPaste": true,
+    "editor.formatOnType": true,
+    "editor.formatOnSave": true,
+}

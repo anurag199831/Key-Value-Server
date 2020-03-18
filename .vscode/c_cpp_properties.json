@@ -1,0 +1,35 @@
+{
+    "configurations": [
+        {
+            "name": "Cygwin",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "D:/cygwin64/lib/gcc/x86_64-pc-cygwin/9.2.0/include",
+                "D:/cygwin64/lib/gcc/x86_64-pc-cygwin/9.2.0/include/c++"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "compilerPath": "D:/cygwin64/bin/gcc.exe",
+            "intelliSenseMode": "gcc-x64",
+            "cppStandard": "c++14"
+        },
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "compilerPath": "/usr/bin/gcc",
+            "intelliSenseMode": "gcc-x64",
+            "cppStandard": "c++14"
+        }
+    ],
+    "version": 4
+}
