@@ -2,13 +2,28 @@
     "tasks": [
         {
             "type": "shell",
-            "label": "gcc build active file",
-            "command": "/usr/bin/gcc",
+            "label": "g++ build active file",
+            "command": "/usr/bin/g++",
             "args": [
                 "-g",
                 "${file}",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}",
+            ],
+            "options": {
+                "cwd": "${workspaceDir}",
+            }
+        },
+        {
+            "type": "shell",
+            "label": "g++ libvirt build active file",
+            "command": "/usr/bin/g++",
+            "args": [
+                "-g",
+                "${file}",
+                "-o",
+                "${fileDirname}/${fileBasenameNoExtension}",
+                "-lvirt"
             ],
             "options": {
                 "cwd": "${workspaceDir}",
