@@ -1,10 +1,11 @@
-#include <libvirt/libvirt.h>
-
 #include <iostream>
+#include <vector>
+
+#include "helper.cpp"
 
 using namespace std;
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
 	virConnectPtr conn;
 
 	conn = virConnectOpen("qemu:///system");
@@ -12,6 +13,6 @@ int main(int argc, char *argv[]) {
 		cerr << "Failed to open connection to qemu:///system\n";
 		return 1;
 	}
+
 	virConnectClose(conn);
-	return 0;
 }
