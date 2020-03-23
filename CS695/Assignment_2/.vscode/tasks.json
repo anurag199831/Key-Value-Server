@@ -6,10 +6,11 @@
             "command": "/usr/bin/g++",
             "args": [
                 "-g",
-                "${file}",
+                "${fileDirname}/manager.cpp",
                 "-o",
-                "${fileDirname}/${fileBasenameNoExtension}",
-                "-lvirt"
+                "${fileDirname}/manager.out",
+                "-lvirt",
+                "-lpthread"
             ],
             "options": {
                 "cwd": "/usr/bin"

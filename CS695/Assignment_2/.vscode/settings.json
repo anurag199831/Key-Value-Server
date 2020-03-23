@@ -10,6 +10,10 @@
         "constants.h": "c",
         "iostream": "cpp",
         "*.tcc": "cpp",
-        "string": "cpp"
+        "string": "cpp",
+        "chrono": "cpp",
+        "thread": "cpp",
+        "ostream": "cpp",
+        "numeric": "cpp"
     }
 }
