@@ -1,43 +1,12 @@
-#include <libvirt/libvirt.h>
+#include "vm.h"
 
 #include <algorithm>
 #include <iostream>
 #include <thread>
-#include <unordered_map>
-#include <vector>
 
 using namespace std;
 
-class VM {
-   private:
-	virDomainPtr domPtr;
-	unordered_map<string, string> getDomainStatRecord(
-		virDomainStatsRecordPtr record);
-	string GetTypedParamValue(virTypedParameterPtr item);
-
-   public:
-	VM(virConnectPtr& connPtr, string& name);
-	VM(virConnectPtr& connPtr);
-	~VM();
-	class failed_call_exception : public exception {
-	   private:
-		string msg;
-
-	   public:
-		failed_call_exception(const char* calling_function,
-							  const char* failing_function) {
-			this->msg = string(calling_function) + string(": failed call to ") +
-						string(failing_function);
-		}
-		~failed_call_exception(){};
-		const char* what() { return msg.c_str(); }
-	};
-
-	static vector<string> getInactiveDomainNames(virConnectPtr& conn);
-	void getStatsforDomain(virConnectPtr& conn, virDomainPtr& dom);
-};
-
-VM::VM(virConnectPtr& connPtr, string& name) {
+VM::VM(virConnectPtr &connPtr, string &name) {
 	if (connPtr == NULL) throw invalid_argument("Invalid connection object\n"s);
 	vector<string> names = getInactiveDomainNames(connPtr);
 	if (find(names.begin(), names.end(), name) == names.end()) {
@@ -50,10 +19,10 @@ VM::VM(virConnectPtr& connPtr, string& name) {
 	}
 }
 
-VM::VM(virConnectPtr& conn) {
+VM::VM(virConnectPtr &conn) {
 	vector<string> inactiveDomains = getInactiveDomainNames(conn);
 	virDomainPtr dom;
-	if (inactiveDomains.size() == 0) {
+	if (inactiveDomains.empty()) {
 		throw runtime_error(
 			"VM::startAnyInactiveDomain: no inactive domain configuration "
 			"found");
@@ -122,7 +91,7 @@ unordered_map<string, string> VM::getDomainStatRecord(
 	virDomainStatsRecordPtr record) {
 	unordered_map<string, string> map;
 	string param;
-	if (record == NULL) {
+	if (record == nullptr or record == NULL) {
 		cerr << "VM::getDomainStatRecord: NULL record passed" << endl;
 		return map;
 	}
@@ -134,31 +103,31 @@ unordered_map<string, string> VM::getDomainStatRecord(
 	return map;
 }
 
-vector<string> VM::getInactiveDomainNames(virConnectPtr& conn) {
+vector<string> VM::getInactiveDomainNames(virConnectPtr &conn) {
 	vector<string> names;
 	int numDomains = virConnectNumOfDefinedDomains(conn);
 	if (numDomains == -1) {
 		return names;
 	}
 	names.reserve(numDomains);
-	char* inactiveDomainsNames[numDomains];
+	char *inactiveDomainsNames[numDomains];
 	numDomains =
 		virConnectListDefinedDomains(conn, inactiveDomainsNames, numDomains);
 	for (int i = 0; i < numDomains; i++) {
-		names.push_back(string(inactiveDomainsNames[i]));
+		names.emplace_back(inactiveDomainsNames[i]);
 	}
 	return names;
 }
 
-void VM::getStatsforDomain(virConnectPtr& conn, virDomainPtr& dom) {
+void VM::getStatsforDomain(virConnectPtr &conn) {
 	int statFlag = VIR_DOMAIN_STATS_VCPU | VIR_DOMAIN_STATS_CPU_TOTAL |
 				   VIR_DOMAIN_STATS_STATE;
 	unordered_map<string, string> currMap, prevMap, testMap;
 	int status = 0;
-
-	virDomainStatsRecordPtr* records = NULL;
-	virDomainStatsRecordPtr* next = NULL;
-	while (true) {
+	int count = 0;
+	virDomainStatsRecordPtr *records = NULL;
+	virDomainStatsRecordPtr *next = NULL;
+	while (count < 100) {
 		status = virConnectGetAllDomainStats(conn, statFlag, &records, 0);
 		if (status == -1) {
 			cerr << "VM::getStatsforDomain: call to "
@@ -173,13 +142,14 @@ void VM::getStatsforDomain(virConnectPtr& conn, virDomainPtr& dom) {
 			while (*next) {
 				testMap = getDomainStatRecord(*next);
 				if (testMap.at("domain.name") ==
-					string(virDomainGetName(dom))) {
+					string(virDomainGetName(domPtr))) {
 					currMap = testMap;
 				}
 				if (*(++next))
 					;
 			}
-			if (!prevMap.empty() or !currMap.empty()) {
+			printMap(currMap);
+			if (!prevMap.empty() and !currMap.empty()) {
 				long diff_time = atol(currMap.at("vcpu.0.time").c_str()) -
 								 atol(prevMap.at("vcpu.0.time").c_str());
 				double util_vcpu = 100.0 * static_cast<double>(diff_time) /
@@ -191,7 +161,14 @@ void VM::getStatsforDomain(virConnectPtr& conn, virDomainPtr& dom) {
 			virDomainStatsRecordListFree(records);
 			records = next = NULL;
 		}
-
+		count += 1;
 		this_thread::sleep_for(chrono::milliseconds(1000));
+	}
+}
+
+void VM::printMap(unordered_map<string, string> &map) {
+	cout << "==================================" << endl;
+	for (auto &&i : map) {
+		cout << i.first << "=" << i.second << endl;
 	}
 }

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <vector>
 
-#include "VM.cpp"
+#include "vm.cpp"
 
 using namespace std;
 
@@ -16,9 +16,9 @@ int main(int argc, char* argv[]) {
 	}
 	try {
 		VM* dom = new VM(conn);
+		dom->getStatsforDomain(conn);
 	} catch (exception& e) {
 		cout << e.what() << endl;
 	}
-
 	virConnectClose(conn);
 }

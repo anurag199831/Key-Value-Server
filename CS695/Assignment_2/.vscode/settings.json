@@ -14,6 +14,7 @@
         "chrono": "cpp",
         "thread": "cpp",
         "ostream": "cpp",
-        "numeric": "cpp"
+        "numeric": "cpp",
+        "stdexcept": "cpp"
     }
 }

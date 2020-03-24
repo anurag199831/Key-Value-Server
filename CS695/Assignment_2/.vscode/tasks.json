@@ -2,25 +2,32 @@
     "tasks": [
         {
             "type": "shell",
-            "label": "g++ build active file lvirt",
+            "label": "g++ build active file",
             "command": "/usr/bin/g++",
             "args": [
                 "-g",
-                "${fileDirname}/manager.cpp",
+                "${file}",
                 "-o",
-                "${fileDirname}/manager.out",
-                "-lvirt",
-                "-lpthread"
+                "${fileDirname}/${fileBasenameNoExtension}",
             ],
             "options": {
-                "cwd": "/usr/bin"
-            },
-            "problemMatcher": [
-                "$gcc"
+                "cwd": "/usr/bin",
+            }
+        },
+        {
+            "type": "shell",
+            "label": "g++ libvirt build active file",
+            "command": "/usr/bin/g++",
+            "args": [
+                "-g",
+                "${file}",
+                "-o",
+                "${fileDirname}/${fileBasenameNoExtension}.out",
+                "-lvirt",
+                "-lpthread",
             ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
+            "options": {
+                "cwd": "/usr/bin",
             }
         }
     ],

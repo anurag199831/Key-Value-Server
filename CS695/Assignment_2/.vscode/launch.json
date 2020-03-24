@@ -5,26 +5,27 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "gcc build and debug active file",
+            "name": "g++ build and debug libvirt active file",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${fileDirname}/${fileBasenameNoExtension}",
+            "program": "${fileDirname}/${fileBasenameNoExtension}.out",
             "args": [
                 "-l"
             ],
             "stopAtEntry": false,
-            "cwd": "${}",
+            "cwd": "/usr/bin",
             "environment": [],
             "externalConsole": false,
+            "preLaunchTask": "g++ libvirt build active file",
             "MIMode": "gdb",
             "setupCommands": [
                 {
                     "description": "Enable pretty-printing for gdb",
                     "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
+                    "ignoreFailures": true,
                 }
             ],
-            "miDebuggerPath": "/usr/bin/gdb"
+            "miDebuggerPath": "/usr/bin/gdb",
         }
     ]
 }
