@@ -23,10 +23,8 @@ class VM {
 
 	virDomainPtr domPtr;
 
-	unordered_map<string, string> getDomainStatRecord(
+	inline unordered_map<string, string> getDomainStatRecord(
 		virDomainStatsRecordPtr record);
-	void printMap(unordered_map<string, string>& map);
-
 	inline string GetTypedParamValue(virTypedParameterPtr item);
 
    public:
@@ -35,5 +33,10 @@ class VM {
 	~VM();
 
 	static vector<string> getInactiveDomainNames(virConnectPtr& conn);
-	void getStatsforDomain(virConnectPtr& conn);
+
+	string getName();
+	unordered_map<string, string> getStatsforDomain(virConnectPtr& conn);
+	void shutdown();
+	double convertStatMapToUtil(unordered_map<string, string>& map);
+	void printUtil(virConnectPtr& conn);
 };
