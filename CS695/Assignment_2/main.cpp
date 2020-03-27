@@ -10,5 +10,4 @@ using namespace std;
 int main(int argc, char* argv[]) {
 	Manager mgr;
 	mgr.startNewVm();
-	mgr.launch();
 }

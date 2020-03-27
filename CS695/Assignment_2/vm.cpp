@@ -6,7 +6,8 @@
 
 using namespace std;
 
-VM::VM(virConnectPtr &connPtr, string &name) {
+// Constructor to create a VM object and start a VM with the given name.
+VM::VM(const virConnectPtr &connPtr, const string &name) {
 	if (connPtr == NULL) throw invalid_argument("Invalid connection object\n"s);
 	vector<string> names = getInactiveDomainNames(connPtr);
 	if (find(names.begin(), names.end(), name) == names.end()) {
@@ -19,7 +20,8 @@ VM::VM(virConnectPtr &connPtr, string &name) {
 	}
 }
 
-VM::VM(virConnectPtr &conn) {
+// Contructor to create a VM object and start any random vm.
+VM::VM(const virConnectPtr &conn) {
 	vector<string> inactiveDomains = getInactiveDomainNames(conn);
 	virDomainPtr dom;
 	if (inactiveDomains.empty()) {
@@ -40,9 +42,15 @@ VM::VM(virConnectPtr &conn) {
 	domPtr = dom;
 }
 
-VM::~VM() { virDomainFree(domPtr); }
+// Destructor for VM objects
+VM::~VM() {
+	virDomainFree(domPtr);
+	domPtr = NULL;
+}
 
-string VM::GetTypedParamValue(virTypedParameterPtr item) {
+// Returns back the string representation of the item value
+// or returns empty string if invalid item passed.
+string VM::GetTypedParamValue(const virTypedParameterPtr &item) {
 	string str;
 	if (item == NULL) {
 		cerr << "VM::GetTypedParamValue : NULL item passed" << endl;
@@ -82,16 +90,19 @@ string VM::GetTypedParamValue(virTypedParameterPtr item) {
 			break;
 
 		default:
-			cerr << "unimplemented parameter type " << item->type << endl;
+			cerr << "VM::GetTypedParamValue: unimplemented parameter type "
+				 << item->type << endl;
 	}
 	return str;
 }
 
-unordered_map<string, string> VM::getDomainStatRecord(
-	virDomainStatsRecordPtr record) {
+// Returns the statics for domain in a unordered map given the record pointer.
+// Returns an empty map if invalid records are passed.
+unordered_map<string, string> VM::getDomainStatRecordMap(
+	const virDomainStatsRecordPtr &record) {
 	unordered_map<string, string> map;
 	string param;
-	if (record == nullptr or record == NULL) {
+	if (record == NULL) {
 		cerr << "VM::getDomainStatRecord: NULL record passed" << endl;
 		return map;
 	}
@@ -102,8 +113,9 @@ unordered_map<string, string> VM::getDomainStatRecord(
 	}
 	return map;
 }
-
-vector<string> VM::getInactiveDomainNames(virConnectPtr &conn) {
+// Returns a vector of strings representing the names of the inactive vms.
+// Returns empty vector if no inactive vms found.
+vector<string> VM::getInactiveDomainNames(const virConnectPtr &conn) {
 	vector<string> names;
 	int numDomains = virConnectNumOfDefinedDomains(conn);
 	if (numDomains == -1) {
@@ -119,7 +131,9 @@ vector<string> VM::getInactiveDomainNames(virConnectPtr &conn) {
 	return names;
 }
 
-unordered_map<string, string> VM::getStatsforDomain(virConnectPtr &conn) {
+// Returns a stat map for the given domain.
+// Returns empty map otherwise.
+unordered_map<string, string> VM::getStatsforDomain(const virConnectPtr &conn) {
 	int statFlag = VIR_DOMAIN_STATS_VCPU | VIR_DOMAIN_STATS_CPU_TOTAL |
 				   VIR_DOMAIN_STATS_STATE;
 
@@ -140,8 +154,9 @@ unordered_map<string, string> VM::getStatsforDomain(virConnectPtr &conn) {
 	} else {
 		next = records;
 		while (*next) {
-			testMap = getDomainStatRecord(*next);
-			if (testMap.at("domain.name") == string(virDomainGetName(domPtr))) {
+			testMap = getDomainStatRecordMap(*next);
+			if (!testMap.empty() and
+				testMap.at("domain.name") == string(virDomainGetName(domPtr))) {
 				currMap = testMap;
 				break;
 			}
@@ -154,14 +169,34 @@ unordered_map<string, string> VM::getStatsforDomain(virConnectPtr &conn) {
 	return currMap;
 }
 
-void VM::shutdown() { virDomainShutdown(domPtr); }
+void VM::shutdown() {
+	cout << "Shutting down :" << getName() << endl;
+	virDomainShutdown(domPtr);
+}
 
 string VM::getName() {
 	string name = virDomainGetName(domPtr);
 	return name;
 }
 
-double VM::convertStatMapToUtil(unordered_map<string, string> &map) {
+// Returns a enum value of type virDomainState.
+long VM::getVmState(const unordered_map<string, string> &map) {
+	if (map.empty()) {
+		return 0;
+	}
+	auto state = map.find("state.state");
+	if (state != map.end()) {
+		return atol(state->second.c_str());
+	}
+	return 0;
+}
+
+// Returns the CPU utilization of the domain, given the stat map.
+// Returns 0 otherwise.
+double VM::convertStatMapToUtil(const unordered_map<string, string> &map) {
+	if (map.empty()) {
+		return 0;
+	}
 	size_t vcpu_current = 0, vcpu_maximum = 0;
 	auto n_curr = map.find("vcpu.current");
 	auto n_max = map.find("vcpu.maximum");
@@ -174,7 +209,7 @@ double VM::convertStatMapToUtil(unordered_map<string, string> &map) {
 		return 0;
 	}
 	string cpu_name;
-	unordered_map<string, string>::iterator iter;
+	unordered_map<string, string>::const_iterator iter;
 	double cpu_util = 0;
 
 	for (size_t i = 0; i < vcpu_maximum; i++) {
@@ -188,7 +223,9 @@ double VM::convertStatMapToUtil(unordered_map<string, string> &map) {
 	return cpu_util / vcpu_current;
 }
 
-void VM::printUtil(virConnectPtr &conn) {
+// Returns a tuple of (status,util) where status is of type virDomainState and
+// util is of type double.
+tuple<long, double> VM::getVmCpuUtil(const virConnectPtr &conn) {
 	string domain_name = getName();
 	auto prev_map = getStatsforDomain(conn);
 	double time_prev = convertStatMapToUtil(prev_map);
@@ -197,19 +234,5 @@ void VM::printUtil(virConnectPtr &conn) {
 	double time_curr = convertStatMapToUtil(curr_map);
 	double avg_util = 100 * (time_curr - time_prev) / (1000 * 1000 * 1000);
 	avg_util = max(0.0, min(100.0, avg_util));
-	cout << domain_name << " util. = " << avg_util << "%" << endl;
+	return make_tuple(getVmState(curr_map), avg_util);
 }
-
-// void VM::printUtil(virConnectPtr &conn) {
-// 	string domain_name = getName();
-// 	while (true) {
-// 		auto prev_map = getStatsforDomain(conn);
-// 		double time_prev = convertStatMapToUtil(prev_map);
-// 		this_thread::sleep_for(chrono::milliseconds(1000));
-// 		auto curr_map = getStatsforDomain(conn);
-// 		double time_curr = convertStatMapToUtil(curr_map);
-// 		double avg_util = 100 * (time_curr - time_prev) / (1000 * 1000 * 1000);
-// 		avg_util = max(0.0, min(100.0, avg_util));
-// 		cout << domain_name << " util. = " << avg_util << "%" << endl;
-// 	}
-// }

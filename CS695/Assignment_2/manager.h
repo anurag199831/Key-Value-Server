@@ -24,14 +24,13 @@ class Manager {
 	};
 	virConnectPtr conn;
 	vector<VM*> domains;
-
-	const size_t NUMBER_OF_VMS = 2;
+	vector<thread> threadsOfDomains;
 
    public:
 	Manager();
 	~Manager();
 	void startNewVm();
 	void startNewVm(string name);
+	void watch(VM*& vm);
 	void launch();
-	void test();
 };
