@@ -1,6 +1,8 @@
 #include "manager.h"
 
 #include <algorithm>
+#include <functional>
+#include <stack>
 #include <thread>
 #include <unordered_set>
 
@@ -12,24 +14,23 @@ Manager::Manager() {
 }
 
 Manager::~Manager() {
-	for (std::thread &th : threadsOfDomains) {
-		if (th.joinable()) th.join();
-	}
-	for (auto &i : domains) {
-		delete i;
+	for (auto &&i : domains) {
+		delete i.second;
 	}
 	virConnectClose(conn);
 	conn = NULL;
 }
 
-void Manager::startNewVm() {
+string Manager::startNewVm() {
+	string name;
 	try {
 		VM *vm = new VM(conn);
-		domains.push_back(vm);
-		watch(vm);
+		name = vm->getName();
+		domains[name] = vm;
 	} catch (exception &e) {
 		cout << e.what() << endl;
 	}
+	return name;
 }
 
 void Manager::startNewVm(string name) {
@@ -39,19 +40,44 @@ void Manager::startNewVm(string name) {
 	} else {
 		try {
 			VM *vm = new VM(conn, name);
-			domains.push_back(vm);
-			watch(vm);
+			domains[name] = vm;
 		} catch (exception &e) {
 			cout << e.what() << endl;
 		}
 	}
 }
-void Manager::watch(VM *&vm) {
-	thread th([vm, this]() {
+
+void Manager::watch(string nameOfVm) {
+	class Worker {
+		stack<function<void(string)>> exit_funcs;
+		string nameOfVm;
+
+	   public:
+		Worker(string name) : nameOfVm(name) {}
+		Worker(Worker const &) = delete;
+		void operator=(Worker const &) = delete;
+		~Worker() {
+			while (!exit_funcs.empty()) {
+				exit_funcs.top()(nameOfVm);
+				exit_funcs.pop();
+			}
+		}
+		void add(function<void(string)> func) { exit_funcs.push(move(func)); }
+	};
+	thread_local Worker threadWorker(nameOfVm);
+	threadWorker.add([this](string nameOfVm) {
+		cout << "Cleanup code called for " << nameOfVm << endl;
+		VM *vm = domains.at(nameOfVm);
+		domains.erase(nameOfVm);
+		delete vm;
+	});
+	threadWorker.add([this](string nameOfVm) {
+		cout << "Looping code called for " << nameOfVm << endl;
 		bool flag = true;
 		long status = 0;
 		double util = 0;
 		long count = 0;
+		VM *vm = domains.at(nameOfVm);
 		while (flag) {
 			count++;
 			auto t = vm->getVmCpuUtil(conn);
@@ -67,28 +93,14 @@ void Manager::watch(VM *&vm) {
 			}
 		}
 	});
-	threadsOfDomains.push_back(move(th));
 }
 
-void Manager::launch() {
-	VM *vm = domains.at(0);
-	thread th([vm, this]() {
-		bool flag = true;
-		long status = 0;
-		double util = 0;
-		long count = 0;
-		while (flag) {
-			cout << "count: " << count << " ";
-			count++;
-			auto t = vm->getVmCpuUtil(conn);
-			status = get<0>(t);
-			cout << "status: " << status << endl;
-			if (status >= 4 and status <= 6) {
-				cout << "Manager::launch: VM is powered off" << endl;
-				flag = false;
-			}
-			util = get<1>(t);
-			cout << vm->getName() << " util: " << util << "%" << endl;
-		}
-	});
+thread *Manager::launch(string name) {
+	thread *th = new thread([this, name]() { watch(name); });
+	cout << "Manager: launch: Testing this point" << endl;
+	return th;
+}
+
+void Manager::debugInfo() {
+	cout << "Is domains vectorEmpty? :" << domains.empty() << endl;
 }

@@ -1,7 +1,7 @@
 #include <libvirt/libvirt.h>
 
 #include <iostream>
-#include <vector>
+#include <unordered_map>
 
 #include "vm.cpp"
 
@@ -23,14 +23,14 @@ class Manager {
 		const char* what() { return msg.c_str(); }
 	};
 	virConnectPtr conn;
-	vector<VM*> domains;
-	vector<thread> threadsOfDomains;
+	unordered_map<string, VM*> domains;
+	void watch(string nameOfVm);
 
    public:
 	Manager();
 	~Manager();
-	void startNewVm();
-	void startNewVm(string name);
-	void watch(VM*& vm);
-	void launch();
+	string startNewVm();
+	void startNewVm(string nameOfVm);
+	thread* launch(string nameOfVm);
+	void debugInfo();
 };
