@@ -16,11 +16,11 @@ VM::VM(const virConnectPtr &connPtr, const string &name) {
 	}
 	domPtr = virDomainLookupByName(connPtr, name.c_str());
 	if (domPtr == NULL) {
-		throw failed_call_exception("VM::VM()", "virDomainLookupByName");
+		throw runtime_error("VM::VM(): call failed to virDomainLookupByName");
 	}
 }
 
-// Contructor to create a VM object and start any random vm.
+// Constructor to create a VM object and start any random vm.
 VM::VM(const virConnectPtr &conn) {
 	vector<string> inactiveDomains = getInactiveDomainNames(conn);
 	virDomainPtr dom;
@@ -134,7 +134,7 @@ vector<string> VM::getInactiveDomainNames(const virConnectPtr &conn) {
 // Returns a stat map for the given domain.
 // Returns empty map otherwise.
 unordered_map<string, string> VM::getStatsforDomain(const virConnectPtr &conn) {
-	int statFlag = VIR_DOMAIN_STATS_VCPU | VIR_DOMAIN_STATS_CPU_TOTAL |
+	unsigned int statFlag =  VIR_DOMAIN_STATS_VCPU | VIR_DOMAIN_STATS_CPU_TOTAL |
 				   VIR_DOMAIN_STATS_STATE;
 
 	unordered_map<string, string> currMap, testMap;

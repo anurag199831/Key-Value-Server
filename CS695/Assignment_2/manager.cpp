@@ -4,7 +4,7 @@
 #include <functional>
 #include <stack>
 #include <thread>
-#include <unordered_set>
+#include <utility>
 
 Manager::Manager() {
 	conn = virConnectOpen("qemu:///system");
@@ -33,14 +33,14 @@ string Manager::startNewVm() {
 	return name;
 }
 
-void Manager::startNewVm(string name) {
+void Manager::startNewVm(const string& nameOfVm) {
 	auto vec = VM::getInactiveDomainNames(conn);
-	if (find(vec.begin(), vec.end(), name) != vec.end()) {
-		cerr << "Manager::startNewVm: no domain with name " << name << endl;
+	if (find(vec.begin(), vec.end(), nameOfVm) != vec.end()) {
+		cerr << "Manager::startNewVm: no domain with name " << nameOfVm << endl;
 	} else {
 		try {
-			VM *vm = new VM(conn, name);
-			domains[name] = vm;
+			VM *vm = new VM(conn, nameOfVm);
+			domains[nameOfVm] = vm;
 		} catch (exception &e) {
 			cout << e.what() << endl;
 		}
@@ -53,7 +53,7 @@ void Manager::watch(string nameOfVm) {
 		string nameOfVm;
 
 	   public:
-		Worker(string name) : nameOfVm(name) {}
+		explicit Worker(string name) : nameOfVm(std::move(name)) {}
 		Worker(Worker const &) = delete;
 		void operator=(Worker const &) = delete;
 		~Worker() {
@@ -64,14 +64,14 @@ void Manager::watch(string nameOfVm) {
 		}
 		void add(function<void(string)> func) { exit_funcs.push(move(func)); }
 	};
-	thread_local Worker threadWorker(nameOfVm);
-	threadWorker.add([this](string nameOfVm) {
+	thread_local Worker threadWorker(std::move(nameOfVm));
+	threadWorker.add([this](const string& nameOfVm) {
 		cout << "Cleanup code called for " << nameOfVm << endl;
 		VM *vm = domains.at(nameOfVm);
 		domains.erase(nameOfVm);
 		delete vm;
 	});
-	threadWorker.add([this](string nameOfVm) {
+	threadWorker.add([this](const string& nameOfVm) {
 		cout << "Looping code called for " << nameOfVm << endl;
 		bool flag = true;
 		long status = 0;
@@ -95,10 +95,19 @@ void Manager::watch(string nameOfVm) {
 	});
 }
 
-thread *Manager::launch(string name) {
-	thread *th = new thread([this, name]() { watch(name); });
-	cout << "Manager: launch: Testing this point" << endl;
+thread *Manager::launch(const string& nameOfVm) {
+	auto *th = new thread([this, nameOfVm]() { watch(nameOfVm); });
 	return th;
+}
+
+void Manager::shutdown(const string& nameOfVm) {
+	VM *vm;
+	try {
+		vm = domains.at(nameOfVm);
+		vm->shutdown();
+	} catch (exception &e) {
+		cout << e.what() << endl;
+	}
 }
 
 void Manager::debugInfo() {
