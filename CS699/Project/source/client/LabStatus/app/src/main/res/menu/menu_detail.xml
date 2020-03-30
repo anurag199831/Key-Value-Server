@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.example.labstatus.DetailActivity">
+   <!---
+    <item
+        android:id="@+id/action_exam"
+        android:orderInCategory="100"
+        app:showAsAction="always"
+        android:icon="@drawable/ic_exam_mode"
+        android:title="Exam Mode"/>
+        -->
+    <item
+        android:id="@+id/exam_mode_on"
+        android:orderInCategory="100"
+        android:title="@string/en_exam"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/exam_mode_off"
+        android:orderInCategory="100"
+        android:title="@string/dis_exam"
+        app:showAsAction="never" />
+   <!-- <item
+        android:id="@+id/action_settings"
+        android:orderInCategory="100"
+        android:title="@string/action_settings"
+        app:showAsAction="never" />
+-->
+
+</menu>
