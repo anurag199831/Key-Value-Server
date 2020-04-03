@@ -26,21 +26,21 @@ string Manager::startNewVm() {
 	try {
 		VM *vm = new VM(conn);
 		name = vm->getName();
-		domains[name] = vm;
+		domains.insert(make_pair(name, move(vm)));
 	} catch (exception &e) {
 		cout << e.what() << endl;
 	}
 	return name;
 }
 
-void Manager::startNewVm(const string& nameOfVm) {
+void Manager::startNewVm(const string &nameOfVm) {
 	auto vec = VM::getInactiveDomainNames(conn);
 	if (find(vec.begin(), vec.end(), nameOfVm) != vec.end()) {
 		cerr << "Manager::startNewVm: no domain with name " << nameOfVm << endl;
 	} else {
 		try {
 			VM *vm = new VM(conn, nameOfVm);
-			domains[nameOfVm] = vm;
+			domains.insert(make_pair(nameOfVm, move(vm)));
 		} catch (exception &e) {
 			cout << e.what() << endl;
 		}
@@ -65,13 +65,13 @@ void Manager::watch(string nameOfVm) {
 		void add(function<void(string)> func) { exit_funcs.push(move(func)); }
 	};
 	thread_local Worker threadWorker(std::move(nameOfVm));
-	threadWorker.add([this](const string& nameOfVm) {
+	threadWorker.add([this](const string &nameOfVm) {
 		cout << "Cleanup code called for " << nameOfVm << endl;
 		VM *vm = domains.at(nameOfVm);
 		domains.erase(nameOfVm);
 		delete vm;
 	});
-	threadWorker.add([this](const string& nameOfVm) {
+	threadWorker.add([this](const string &nameOfVm) {
 		cout << "Looping code called for " << nameOfVm << endl;
 		bool flag = true;
 		long status = 0;
@@ -95,12 +95,12 @@ void Manager::watch(string nameOfVm) {
 	});
 }
 
-thread *Manager::launch(const string& nameOfVm) {
+thread *Manager::launch(const string &nameOfVm) {
 	auto *th = new thread([this, nameOfVm]() { watch(nameOfVm); });
 	return th;
 }
 
-void Manager::shutdown(const string& nameOfVm) {
+void Manager::shutdown(const string &nameOfVm) {
 	VM *vm;
 	try {
 		vm = domains.at(nameOfVm);
@@ -112,4 +112,13 @@ void Manager::shutdown(const string& nameOfVm) {
 
 void Manager::debugInfo() {
 	cout << "Is domains vectorEmpty? :" << domains.empty() << endl;
+	for (auto &&i : domains) {
+		auto m = i.second->getInterfaceInfo();
+		for (auto &&i : m) {
+			cout << "hwaddr: " << i.first << endl;
+			for (auto &j : i.second) {
+				cout << "nwaddr: " << j << endl;
+			}
+		}
+	}
 }

@@ -134,8 +134,8 @@ vector<string> VM::getInactiveDomainNames(const virConnectPtr &conn) {
 // Returns a stat map for the given domain.
 // Returns empty map otherwise.
 unordered_map<string, string> VM::getStatsforDomain(const virConnectPtr &conn) {
-	unsigned int statFlag =  VIR_DOMAIN_STATS_VCPU | VIR_DOMAIN_STATS_CPU_TOTAL |
-				   VIR_DOMAIN_STATS_STATE;
+	unsigned int statFlag = VIR_DOMAIN_STATS_VCPU | VIR_DOMAIN_STATS_CPU_TOTAL |
+							VIR_DOMAIN_STATS_STATE;
 
 	unordered_map<string, string> currMap, testMap;
 	int status = 0;
@@ -235,4 +235,31 @@ tuple<long, double> VM::getVmCpuUtil(const virConnectPtr &conn) {
 	double avg_util = 100 * (time_curr - time_prev) / (1000 * 1000 * 1000);
 	avg_util = max(0.0, min(100.0, avg_util));
 	return make_tuple(getVmState(curr_map), avg_util);
+}
+
+// Returns the mapping of hwaddr: nwaddrs as a map of (string,vector<string>).
+// Returns empty otherwise.
+unordered_map<string, vector<string>> VM::getInterfaceInfo() {
+	int max_retry = 10;
+	virDomainInterfacePtr *ifaces = NULL;
+	unordered_map<string, vector<string>> map;
+	int ifacesCount = virDomainInterfaceAddresses(
+		domPtr, &ifaces, VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE, 0);
+	while (ifacesCount == -1 and max_retry) {
+		this_thread::sleep_for(chrono::milliseconds(100));
+		max_retry--;
+	}
+	string hwaddr;
+	vector<string> naddrs;
+	for (int i = 0; i < ifacesCount; i++) {
+		hwaddr = string(ifaces[i]->hwaddr);
+		for (uint j = 0; j < ifaces[i]->naddrs; j++) {
+			if (ifaces[i]->addrs[j].type == 0) {
+				naddrs.emplace_back(ifaces[i]->addrs[j].addr);
+			};
+		}
+		virDomainInterfaceFree(ifaces[i]);
+	}
+	map.emplace(hwaddr, naddrs);
+	return map;
 }

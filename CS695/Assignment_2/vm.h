@@ -22,6 +22,7 @@ class VM {
 
 	string getName();
 	void shutdown();
+	unordered_map<string, vector<string>> getInterfaceInfo();
 	long getVmState(const unordered_map<string, string>& map);
 	unordered_map<string, string> getStatsforDomain(const virConnectPtr& conn);
 	double convertStatMapToUtil(const unordered_map<string, string>& map);
