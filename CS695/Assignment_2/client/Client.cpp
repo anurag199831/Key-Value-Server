@@ -12,13 +12,14 @@
 using namespace std;
 
 void printUsage(const string &name) {
-	cout << "Usage (For batch mode): " << name
-		 << " -port=<port> -input=<input_file>  -output=<output_file>" << endl;
-	cout << "Usage (For interactive mode): " << name << "-port=<port>" << endl;
+	cout << "Usage: " << name
+		 << "-ip=<ip> -port=<port> -input=<input_file>  -output=<output_file>"
+		 << endl;
 	exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char const *argv[]) {
+	string ip;
 	size_t port;
 	string inputfile;
 	string outputfile;
@@ -26,22 +27,28 @@ int main(int argc, char const *argv[]) {
 	size_t pos;
 	bool interactive = false;
 
-	if (argc == 4) {
+	if (argc == 5) {
 		for (int i = 1; i < argc; i++) {
 			arg = string(argv[i]);
 			if (i == 1 and (pos = arg.find('=')) != string::npos) {
+				if (arg.substr(1, pos - 1) == "ip") {
+					ip = arg.substr(pos + 1, arg.length());
+				} else {
+					printUsage(string(argv[0]));
+				}
+			} else if (i == 2 and (pos = arg.find('=')) != string::npos) {
 				if (arg.substr(1, pos - 1) == "port") {
 					port = stoi(arg.substr(pos + 1, arg.length()));
 				} else {
 					printUsage(string(argv[0]));
 				}
-			} else if (i == 2 and (pos = arg.find('=')) != string::npos) {
+			} else if (i == 3 and (pos = arg.find('=')) != string::npos) {
 				if (arg.substr(1, pos - 1) == "input") {
 					inputfile = arg.substr(pos + 1, arg.length());
 				} else {
 					printUsage(string(argv[0]));
 				}
-			} else if (i == 3 and (pos = arg.find('=')) != string::npos) {
+			} else if (i == 4 and (pos = arg.find('=')) != string::npos) {
 				if (arg.substr(1, pos - 1) == "output") {
 					outputfile = arg.substr(pos + 1, arg.length());
 				} else {
@@ -51,18 +58,6 @@ int main(int argc, char const *argv[]) {
 				printUsage(string(argv[0]));
 			}
 		}
-		// cout << "Batch mode\n";
-	} else if (argc == 2) {
-		arg = string(argv[1]);
-		if ((pos = arg.find('=')) != string::npos) {
-			if (arg.substr(1, pos - 1) == "port") {
-				port = stoi(arg.substr(pos + 1, arg.length()));
-			} else {
-				printUsage(string(argv[0]));
-			}
-		}
-		// cout << "Interactive mode\n";
-		interactive = true;
 	} else {
 		printUsage(string(argv[0]));
 	}
@@ -78,7 +73,7 @@ int main(int argc, char const *argv[]) {
 	}
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(port);
-	addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	addr.sin_addr.s_addr = inet_addr(ip.c_str());
 
 	if (connect(sockfd, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
 		// cout << "Connected to server\n";
@@ -90,34 +85,6 @@ int main(int argc, char const *argv[]) {
 	string line;
 	char buffer[MAX_BUFFER_SIZE];
 	KVClientLibrary formatter;
-
-	if (interactive) {
-		while (true) {
-			cin >> line;
-			vector<string> vec = formatter.tokenize(line);
-			if (vec.size() == 2 and
-				(vec.at(0) == "get" or vec.at(0) == "del" or
-				 vec.at(0) == "GET" or vec.at(0) == "DEL")) {
-				line = formatter.convertToXML(vec.at(0), vec.at(1));
-			} else if (vec.size() == 3 and
-					   (vec.at(0) == "put" or vec.at(0) == "PUT")) {
-				line = formatter.convertToXML(vec.at(0), vec.at(1), vec.at(2));
-			} else {
-				line = "garbage";
-			}
-			n = write(sockfd, line.c_str(), line.length());
-			memset(buffer, 0, MAX_BUFFER_SIZE);
-			n = read(sockfd, buffer, MAX_BUFFER_SIZE);
-			line = string(buffer);
-			vec = formatter.parseXML(line);
-			if (vec.size() == 1) {
-				cout << vec.at(0) << '\n';
-			} else if (vec.size() == 2) {
-				cout << vec.at(0) << "," << vec.at(1) << '\n';
-			}
-			line = "";
-		}
-	}
 
 	ifstream infile;
 	infile.open(inputfile, ifstream::in);
