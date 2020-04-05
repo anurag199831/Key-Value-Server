@@ -33,6 +33,7 @@ int main(int argc, char const *argv[]) {
 			if (i == 1 and (pos = arg.find('=')) != string::npos) {
 				if (arg.substr(1, pos - 1) == "ip") {
 					ip = arg.substr(pos + 1, arg.length());
+					cout << ip << endl;
 				} else {
 					printUsage(string(argv[0]));
 				}
@@ -76,7 +77,7 @@ int main(int argc, char const *argv[]) {
 	addr.sin_addr.s_addr = inet_addr(ip.c_str());
 
 	if (connect(sockfd, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
-		// cout << "Connected to server\n";
+		cout << "Connected to server\n";
 	} else {
 		cerr << "Network Error: Could not connect\n";
 		exit(EXIT_FAILURE);
@@ -116,8 +117,10 @@ int main(int argc, char const *argv[]) {
 			line = "garbage";
 		}
 		n = write(sockfd, line.c_str(), line.length());
+		cout << "Data sent to server" << endl;
 		memset(buffer, 0, MAX_BUFFER_SIZE);
 		n = read(sockfd, buffer, MAX_BUFFER_SIZE);
+		cout << "Data received from server" << endl;
 		line = string(buffer);
 		if (vec.at(0) == "get" or vec.at(0) == "GET") {
 			vec = formatter.parseXML(line);
@@ -147,6 +150,6 @@ int main(int argc, char const *argv[]) {
 		}
 		line = "";
 	}
-	// cout << "File terminated" << endl;
+	cout << "File terminated" << endl;
 	return 0;
 }

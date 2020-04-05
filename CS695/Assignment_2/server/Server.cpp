@@ -1,19 +1,21 @@
 #include <arpa/inet.h>
-#include <cerrno>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <sys/epoll.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#include <cerrno>
 #include <cstring>
 #include <iostream>
 #include <set>
+
 #include "KVClientHandler.cpp"
 
 using namespace std;
 
 class Server {
-private:
+   private:
 	const int BACK_LOG = 5;
 	const int MAX_BUFF = 1024;
 	const int MAX_EVENTS = 20;
@@ -26,18 +28,18 @@ private:
 	int epoll_fd{};
 	KVClientHandler handler;
 
-public:
+   public:
 	Server(const size_t port, const size_t threadPoolSize,
 		   const size_t numSetsInCache, const size_t sizeOfSet)
-			: port(port),
-			  threadPoolSize(threadPoolSize),
-			  numSetsInCache(numSetsInCache),
-			  sizeOfSet(sizeOfSet),
-			  handler(threadPoolSize, numSetsInCache, sizeOfSet) {}
+		: port(port),
+		  threadPoolSize(threadPoolSize),
+		  numSetsInCache(numSetsInCache),
+		  sizeOfSet(sizeOfSet),
+		  handler(threadPoolSize, numSetsInCache, sizeOfSet) {}
 	~Server() { close(epoll_fd); }
 
 	void init() {
-		struct stat info{};
+		struct stat info {};
 		if (stat(pathToDatabase.c_str(), &info) != 0) {
 			cout << "Creating directory for KVStore\n";
 			if (mkdir(pathToDatabase.c_str(), 0777) == -1) {
@@ -49,7 +51,7 @@ public:
 			cout << "Directory for KVStore already exists\n";
 		}
 
-		struct sockaddr_in addr{};
+		struct sockaddr_in addr {};
 		serverFd = socket(AF_INET, SOCK_STREAM, 0);
 		if (serverFd == -1) {
 			cerr << "Error getting a socket" << endl;
@@ -58,16 +60,15 @@ public:
 		memset(&addr, 0, sizeof(addr));
 		addr.sin_family = AF_INET;
 		addr.sin_port = htons(port);
-		addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 		addr.sin_addr.s_addr = htonl(INADDR_ANY);
 		if (bind(serverFd, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
-			// cout << "Binding successful" << endl;
+			cout << "Binding successful" << endl;
 		} else {
 			cerr << "Binding failed" << endl;
 			exit(EXIT_FAILURE);
 		}
 		if (listen(serverFd, BACK_LOG) == 0) {
-			// cout << "Listening on port: " << port << endl;
+			cout << "Listening on port: " << port << endl;
 		} else {
 			cerr << "Listening failed" << endl;
 		}
@@ -77,7 +78,7 @@ public:
 	}
 
 	void start() {
-		struct sockaddr client{};
+		struct sockaddr client {};
 		int addrlen = 0;
 		epoll_fd = epoll_create1(0);
 		if (epoll_fd == -1) {
@@ -99,9 +100,9 @@ public:
 			sockfd = accept(serverFd, (struct sockaddr *)&client,
 							(socklen_t *)&addrlen);
 			if (sockfd != -1) {
-				// cout << "sockfd: " << sockfd << endl;
-				// cout << "Client connected\n";
-				struct epoll_event ev{};
+				cout << "sockfd: " << sockfd << endl;
+				cout << "Client connected\n";
+				struct epoll_event ev {};
 				ev.events = EPOLLIN | EPOLLET;
 				ev.data.fd = sockfd;
 				if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, ev.data.fd, &ev) == -1) {
@@ -157,21 +158,19 @@ public:
 };
 
 void printUsage(string s) {
-	cout << "Usage: " << s
-		 << " -port=XXXX -threadPoolSize=XXXX -numSetsInCache=XXXX "
-			"-sizeOfSet=XXXX\n";
+	cout << "Usage: " << s << " -port=XXXX\n";
 	exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char const *argv[]) {
-	if (argc != 5) {
+	if (argc != 2) {
 		printUsage(string(argv[0]));
 	}
 
 	size_t port;
-	size_t threadPoolSize;
-	size_t numSetsInCache;
-	size_t sizeOfSet;
+	size_t threadPoolSize = 16;
+	size_t numSetsInCache = 64;
+	size_t sizeOfSet = 128;
 
 	string arg;
 	size_t pos = 0;
@@ -181,27 +180,6 @@ int main(int argc, char const *argv[]) {
 			if (arg.substr(1, pos - 1) == "port") {
 				port = stoi(arg.substr(pos + 1, arg.length()));
 				// cout << port << endl;
-			} else {
-				printUsage(string(argv[0]));
-			}
-		} else if (i == 2 and (pos = arg.find('=')) != string::npos) {
-			if (arg.substr(1, pos - 1) == "threadPoolSize") {
-				threadPoolSize = stoi(arg.substr(pos + 1, arg.length()));
-				// cout << threadPoolSize << endl;
-			} else {
-				printUsage(string(argv[0]));
-			}
-		} else if (i == 3 and (pos = arg.find('=')) != string::npos) {
-			if (arg.substr(1, pos - 1) == "numSetsInCache") {
-				numSetsInCache = stoi(arg.substr(pos + 1, arg.length()));
-				// cout << numSetsInCache << endl;
-			} else {
-				printUsage(string(argv[0]));
-			}
-		} else if (i == 4 and (pos = arg.find('=')) != string::npos) {
-			if (arg.substr(1, pos - 1) == "sizeOfSet") {
-				sizeOfSet = stoi(arg.substr(pos + 1, arg.length()));
-				// cout << sizeOfSet << endl;
 			} else {
 				printUsage(string(argv[0]));
 			}

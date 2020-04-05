@@ -113,6 +113,7 @@ void Manager::shutdown(const string &nameOfVm) {
 void Manager::debugInfo() {
 	cout << "Is domains vectorEmpty? :" << domains.empty() << endl;
 	for (auto &&i : domains) {
+		cout << "Domain: " << i.second->getName() << endl;
 		auto m = i.second->getInterfaceInfo();
 		for (auto &&i : m) {
 			cout << "hwaddr: " << i.first << endl;

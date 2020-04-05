@@ -2,26 +2,27 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+
 #include "KVServerLibrary.cpp"
 
 using namespace std;
 
 class KVStore {
-private:
+   private:
 	const string pathToDatabase = "database/";
 	const size_t maxNumberOfFiles;
 	KVStoreFormatter formatter;
 
-public:
+   public:
 	KVStore(const string& path, const size_t maxNumberOfFiles)
-			: pathToDatabase(path), maxNumberOfFiles(maxNumberOfFiles) {}
+		: pathToDatabase(path), maxNumberOfFiles(maxNumberOfFiles) {}
 
 	explicit KVStore(const size_t maxNumberOfFiles)
-			: maxNumberOfFiles(maxNumberOfFiles) {}
+		: maxNumberOfFiles(maxNumberOfFiles) {}
 
-	KVStore(const KVStore &obj)
-			: pathToDatabase(obj.pathToDatabase),
-			  maxNumberOfFiles(obj.maxNumberOfFiles) {}
+	KVStore(const KVStore& obj)
+		: pathToDatabase(obj.pathToDatabase),
+		  maxNumberOfFiles(obj.maxNumberOfFiles) {}
 
 	~KVStore() = default;
 
@@ -47,7 +48,6 @@ public:
 			return "";
 		}
 		string line;
-		size_t pos = 0;
 		while (!inFile.eof()) {
 			inFile >> line;
 			if (line.find("<KVStore>") != string::npos) {
@@ -65,7 +65,8 @@ public:
 		return "";
 	}
 
-	bool updateInFile(size_t fileID, const string& key, const string& value, bool put) {
+	bool updateInFile(size_t fileID, const string& key, const string& value,
+					  bool put) {
 		string fileName = pathToDatabase + to_string(fileID);
 		ifstream inFile;
 		ofstream outFile;

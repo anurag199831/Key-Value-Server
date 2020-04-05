@@ -1,6 +1,7 @@
 #include <functional>
 #include <iostream>
 #include <mutex>
+
 #include "KVStore.cpp"
 
 struct entry {
@@ -11,7 +12,7 @@ struct entry {
 };
 
 class CacheSet {
-private:
+   private:
 	vector<struct entry> entries;
 	const size_t noOfEntries;
 	size_t evictionPointer = 0;
@@ -47,10 +48,10 @@ private:
 		return make_pair(holeIndex, type);
 	}
 
-public:
+   public:
 	CacheSet(const size_t setID, const size_t noOfEntries,
 			 const vector<pair<string, string>>& init)
-			: setID(setID), noOfEntries(noOfEntries) {
+		: setID(setID), noOfEntries(noOfEntries) {
 		entries.resize(noOfEntries);
 		for (size_t i = 0; i < init.size(); i++) {
 			entries.at(i).isReferenced = false;
@@ -62,7 +63,7 @@ public:
 
 	~CacheSet() = default;
 
-	void putEntry(KVStore &store, const string& key, const string& value,
+	void putEntry(KVStore& store, const string& key, const string& value,
 				  bool updateOnlyInCache = false) {
 		if (updateOnlyInCache) {
 			// cout << "UPDATEONLYINCACHE: Called for key: " << key << endl;
@@ -142,9 +143,9 @@ public:
 };
 
 class KVCache {
-private:
+   private:
 	KVStore store;
-	mutex *locks;
+	mutex* locks;
 	const size_t numberOfSets;
 	const size_t entriesPerSet;
 	vector<CacheSet> vec;
@@ -152,11 +153,11 @@ private:
 
 	size_t getSetID(string key) { return hasher(key) % numberOfSets; }
 
-public:
+   public:
 	KVCache(const size_t numberOfSets, const size_t entriesPerSet)
-			: numberOfSets(numberOfSets),
-			  entriesPerSet(entriesPerSet),
-			  store(numberOfSets) {
+		: numberOfSets(numberOfSets),
+		  entriesPerSet(entriesPerSet),
+		  store(numberOfSets) {
 		locks = new mutex[numberOfSets];
 		vec.reserve(numberOfSets);
 		for (size_t i = 0; i < numberOfSets; i++) {
