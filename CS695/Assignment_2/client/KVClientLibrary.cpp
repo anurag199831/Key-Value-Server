@@ -4,40 +4,39 @@
 
 using namespace std;
 
-class KVClientLibrary {
-private:
+class KVClientFormatter {
+   private:
 	const regex pattern;
 	const regex errorPattern;
 
 	string getXML(const string& key) {
 		string s =
-				"<?xml version=\"1.0\" encoding=\"UTF-8\"?><KVMessage "
-				"type=\"getreq\"><Key>" +
-				key + "</Key></KVMessage>";
+			"<?xml version=\"1.0\" encoding=\"UTF-8\"?><KVMessage "
+			"type=\"getreq\"><Key>" +
+			key + "</Key></KVMessage>";
 		return s;
 	}
 
 	string putXML(const string& key, const string& value) {
 		string s =
-				"<?xml version=\"1.0\" encoding=\"UTF-8\"?><KVMessage "
-				"type=\"putreq\"><Key>" +
-				key + "</Key><Value>" + value + "</Value></KVMessage>";
+			"<?xml version=\"1.0\" encoding=\"UTF-8\"?><KVMessage "
+			"type=\"putreq\"><Key>" +
+			key + "</Key><Value>" + value + "</Value></KVMessage>";
 		return s;
 	}
 
 	string deleteXML(const string& key) {
 		string s =
-				"<?xml version=\"1.0\" encoding=\"UTF-8\"?><KVMessage "
-				"type=\"delreq\"><Key>" +
-				key + "</Key></KVMessage>";
+			"<?xml version=\"1.0\" encoding=\"UTF-8\"?><KVMessage "
+			"type=\"delreq\"><Key>" +
+			key + "</Key></KVMessage>";
 		return s;
 	}
 
-public:
-
-	KVClientLibrary()
-			: pattern("<Key>(.*?)</Key><Value>(.*?)</Value>"),
-			  errorPattern("<Message>(.*?)</Message>") {}
+   public:
+	KVClientFormatter()
+		: pattern("<Key>(.*?)</Key><Value>(.*?)</Value>"),
+		  errorPattern("<Message>(.*?)</Message>") {}
 
 	string convertToXML(const string& func, const string& key,
 						const string& value = "") {
@@ -82,5 +81,23 @@ public:
 			// cerr << "Error parsing XML\n";
 		}
 		return vec;
+	}
+
+	bool validateIp(const string& str) {
+		regex pattern(
+			R"(\b([[:digit:]]+)\.([[:digit:]]+).([[:digit:]]+).([[:digit:]]+)\b)");
+		smatch match;
+		int octet = -1;
+		if (regex_search(str, match, pattern)) {
+			if (match.size() == 5) {
+				for (size_t i = 1; i < match.size(); i++) {
+					octet = atol(match.str().c_str());
+					if (octet > 255 and octet < 0) {
+						return false;
+					}
+				}
+			}
+		}
+		return true;
 	}
 };
