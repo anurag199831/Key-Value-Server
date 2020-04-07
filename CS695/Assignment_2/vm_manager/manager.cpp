@@ -1,10 +1,16 @@
 #include "manager.h"
 
+#include <fcntl.h>
+#include <unistd.h>
+
 #include <algorithm>
+#include <fstream>
 #include <functional>
 #include <stack>
 #include <thread>
 #include <utility>
+
+#define MAX_BUFFER_SIZE 1024
 
 Manager::Manager() {
 	conn = virConnectOpen("qemu:///system");
@@ -66,13 +72,11 @@ void Manager::watch(string nameOfVm) {
 	};
 	thread_local Worker threadWorker(std::move(nameOfVm));
 	threadWorker.add([this](const string &nameOfVm) {
-		cout << "Cleanup code called for " << nameOfVm << endl;
 		VM *vm = domains.at(nameOfVm);
 		domains.erase(nameOfVm);
 		delete vm;
 	});
 	threadWorker.add([this](const string &nameOfVm) {
-		cout << "Looping code called for " << nameOfVm << endl;
 		bool flag = true;
 		long status = 0;
 		double util = 0;
@@ -104,6 +108,8 @@ void Manager::shutdown(const string &nameOfVm) {
 	VM *vm;
 	try {
 		vm = domains.at(nameOfVm);
+		cout << "Deleteing IP " << vm->getIp() << endl;
+		deleteIpFromFile(vm->getIp());
 		vm->shutdown();
 	} catch (exception &e) {
 		cout << e.what() << endl;
@@ -119,7 +125,47 @@ void Manager::debugInfo() {
 			cout << "hwaddr: " << i.first << endl;
 			for (auto &j : i.second) {
 				cout << "nwaddr: " << j << endl;
+				writeIpToFile(j);
 			}
 		}
 	}
+}
+
+bool Manager::writeIpToFile(const string &ip) {
+	ofstream serverfile;
+	serverfile.open(ipFile, fstream ::out | fstream::app);
+	if (!serverfile.is_open()) {
+		cerr << "Manager::writeToFile: Error opening file " << ipFile << endl;
+		return false;
+	}
+
+	serverfile << ip << endl;
+	serverfile.close();
+	return true;
+}
+
+bool Manager::deleteIpFromFile(const string &ip) {
+	ifstream inputFile;
+	ofstream outFile;
+	inputFile.open(ipFile, ifstream::in);
+	if (!inputFile.is_open()) {
+		return false;
+	}
+	outFile.open(ipFile + "_temp", ofstream::out);
+	if (!outFile.is_open()) {
+		return false;
+	}
+	string line;
+	while (inputFile.eof()) {
+		inputFile >> line;
+		if (line == ip) {
+			cout << "Manager::deleteIpFromFile: " << ip << " deleted from file"
+				 << endl;
+		} else {
+			outFile << line << endl;
+		}
+	}
+	remove(ipFile.c_str());
+	rename((ipFile + "_temp").c_str(), ipFile.c_str());
+	return true;
 }

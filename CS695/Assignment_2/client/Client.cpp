@@ -5,13 +5,16 @@
 
 #include <fstream>
 #include <iostream>
+#include <thread>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "KVClientLibrary.cpp"
 
 #define MAX_BUFFER_SIZE 1024
 #define BATCH_SIZE 128
 #define DEFAULT_SERVER_PORT 9999
+#define MAX_IDLE_TIME 30
 
 using namespace std;
 
@@ -23,8 +26,8 @@ class Client {
 	int _connectToServer(const string& ip, int port);
 	string __readFile(const string& file);
 	bool _validateIp(const string& str);
-	vector<string> _getAddressesFromFile(const string& file);
-	void _updateServerConnections(const vector<string>& ips);
+	unordered_set<string> _getAddressesFromFile(const string& file);
+	void _updateServerConnections(const unordered_set<string>& ips);
 
    public:
 	Client();
@@ -54,7 +57,8 @@ int Client::_connectToServer(const string& ip, int port) {
 	if (connect(sockfd, (struct sockaddr*)&addr, sizeof(addr)) == 0) {
 		cout << "Connected to server\n";
 	} else {
-		cerr << "Network Error: Could not connect\n";
+		cerr << "Network Error: Could not connect to " << ip << " on port "
+			 << port << endl;
 		return -1;
 	}
 	return sockfd;
@@ -67,12 +71,14 @@ void Client::start(const string& inputFile, const string& outFile) {
 	int status = 0;
 	int request = 0;
 	char buffer[MAX_BUFFER_SIZE];
-	const string serverFile = "../vm_manager/server.dat";
+	const string serverFile =
+		"/home/pranav/Repos/IITB/CS695/Assignment_2/vm_manager/server.dat";
 
 	ifstream infile;
 	infile.open(inputFile, ifstream::in);
 	if (!infile.is_open()) {
 		cerr << "Client::start: Error opening: " << inputFile << endl;
+		infile.close();
 		exit(EXIT_FAILURE);
 	}
 
@@ -80,14 +86,19 @@ void Client::start(const string& inputFile, const string& outFile) {
 	outfile.open(outFile, ofstream::out);
 	if (!outfile.is_open()) {
 		cerr << "Client::start: Error creating: " << outFile << endl;
+		infile.close();
+		outfile.close();
 		exit(EXIT_FAILURE);
 	}
 
-	while (idleCount < 30) {
+	while (idleCount < MAX_IDLE_TIME) {
 		request = 0;
 		auto ips = _getAddressesFromFile(serverFile);
 		_updateServerConnections(ips);
 		if (servers.empty()) {
+			cout << "Client::start: No active servers found terminating after "
+				 << MAX_IDLE_TIME - idleCount << endl;
+			this_thread::sleep_for(chrono::milliseconds(1000));
 			idleCount++;
 			continue;
 		}
@@ -97,12 +108,11 @@ void Client::start(const string& inputFile, const string& outFile) {
 					  return val.second;
 				  });
 
-		while (!infile.eof() and request < BATCH_SIZE) {
+		while (!(infile >> line) and request < BATCH_SIZE) {
 			request++;
 			sockfd = fds.at(request / fds.size());
 			idleCount = 0;
 
-			infile >> line;
 			if (line.length() == 0) {
 				continue;
 			}
@@ -161,64 +171,49 @@ void Client::start(const string& inputFile, const string& outFile) {
 // Reads a files and returns a single string of the entire text.
 // Returns empty string in case of error.
 string Client::__readFile(const string& file) {
-	string str;
-	struct flock fl = {F_WRLCK, SEEK_SET, 0, 0, 0};
-	int fd;
-
-	fl.l_pid = getpid();
-	fl.l_type = F_RDLCK;
-
-	if ((fd = open(file.c_str(), O_RDONLY)) == -1) {
-		cerr << "Client::_readFile: Error opening file " << file << endl;
-		return str;
+	ifstream serverFile;
+	string retStr = "", str; /* code */
+	cout << "Trying to open file " << file << endl;
+	serverFile.open(file, ifstream::in);
+	if (!serverFile.is_open()) {
+		cerr << "Client::__readFile: Error opening file " << file << endl;
+		return retStr;
 	}
-
-	if (fcntl(fd, F_SETLK, &fl) == -1) {
-		cerr << "Client::_readFile: Couldn't obtain a lock on file " << file
-			 << endl;
-		return str;
+	while ((serverFile >> str)) {
+		retStr += (str + '\n');
 	}
-
-	char buff[MAX_BUFFER_SIZE];
-	int n;
-
-	while ((n = read(fd, buff, MAX_BUFFER_SIZE)) != 0) {
-		if (n == -1) {
-			return str;
-		}
-		str += string(buff);
-	}
-
-	fl.l_type = F_UNLCK;
-	if (fcntl(fd, F_SETLK, &fl) == -1) {
-		cerr << "Client::_readFile: Error releasing lock on file " << file
-			 << endl;
-	}
-	return str;
+	serverFile.close();
+	return retStr;
 }
 
 // Returns the vector of all IPs that the client can connect.
 // Returns empty vector in case of error.
-vector<string> Client::_getAddressesFromFile(const string& file) {
-	vector<string> vec;
+unordered_set<string> Client::_getAddressesFromFile(const string& file) {
+	unordered_set<string> s;
 
 	string text = __readFile(file);
-	if (text.empty()) return vec;
+	if (text.empty()) return s;
 
 	stringstream ss(text);
 	string ip;
 
-	while (!ss.eof()) {
-		ss >> ip;
+	while ((ss >> ip)) {
+		cout << "Test: " << ip << endl;
 		if (formatter.validateIp(ip)) {
-			vec.emplace_back(ip);
+			s.emplace(ip);
 		}
 	}
-	return vec;
+	return s;
 }
 
-void Client::_updateServerConnections(const vector<string>& ips) {
+void Client::_updateServerConnections(const unordered_set<string>& ips) {
 	int sockfd;
+	unordered_set<string> inactiveServers;
+	transform(servers.begin(), servers.end(), back_inserter(inactiveServers),
+			  [](const unordered_map<string, int>::value_type& val) {
+				  return val.first;
+			  });
+
 	for (auto&& i : ips) {
 		if (servers.find(i) == servers.end()) {
 			sockfd = _connectToServer(i, DEFAULT_SERVER_PORT);
@@ -231,5 +226,5 @@ void Client::_updateServerConnections(const vector<string>& ips) {
 
 int main(int argc, char const* argv[]) {
 	Client client;
-	KVClientFormatter formatter;
+	client.start("input0.csv", "out0.csv");
 }

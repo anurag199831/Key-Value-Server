@@ -240,13 +240,16 @@ tuple<long, double> VM::getVmCpuUtil(const virConnectPtr &conn) {
 // Returns the mapping of hwaddr: nwaddrs as a map of (string,vector<string>).
 // Returns empty otherwise.
 unordered_map<string, vector<string>> VM::getInterfaceInfo() {
-	int max_retry = 10;
+	int max_retry = 30;
 	virDomainInterfacePtr *ifaces = NULL;
 	unordered_map<string, vector<string>> map;
 	int ifacesCount = virDomainInterfaceAddresses(
 		domPtr, &ifaces, VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE, 0);
-	while (ifacesCount == -1 and max_retry) {
-		this_thread::sleep_for(chrono::milliseconds(100));
+	while ((ifacesCount == -1 or ifacesCount == 0) and max_retry != 0) {
+		cout << "VM::getInterfaceInfo: "
+			 << "Retrying for " << 30 - max_retry << " time" << endl;
+		cout << "VM::getInterfaceInfo: Waiting for VM to start" << endl;
+		this_thread::sleep_for(chrono::milliseconds(1000));
 		max_retry--;
 	}
 	string hwaddr;
@@ -258,8 +261,21 @@ unordered_map<string, vector<string>> VM::getInterfaceInfo() {
 				naddrs.emplace_back(ifaces[i]->addrs[j].addr);
 			};
 		}
+		map.emplace(hwaddr, naddrs);
 		virDomainInterfaceFree(ifaces[i]);
 	}
-	map.emplace(hwaddr, naddrs);
+
 	return map;
+}
+
+string VM::getIp() {
+	auto m = getInterfaceInfo();
+	if (m.empty()) {
+		cerr << "VM::getIp: VM::getInterfaceInfo returned empty" << endl;
+		return "";
+	}
+	for (auto &&i : m) {
+		return i.second.front();
+	}
+	return "";
 }

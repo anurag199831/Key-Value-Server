@@ -11,7 +11,11 @@ class Manager {
    private:
 	virConnectPtr conn;
 	unordered_map<string, VM*> domains;
+	const string ipFile = "server.dat";
+
 	void watch(string nameOfVm);
+	bool writeIpToFile(const string& ip);
+	bool deleteIpFromFile(const string& ip);
 
    public:
 	Manager();
