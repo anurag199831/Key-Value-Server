@@ -5,6 +5,7 @@
 #include <thread>
 #include <utility>
 #include <vector>
+
 #include "KVCache.cpp"
 
 using namespace std;
@@ -12,9 +13,12 @@ using namespace std;
 struct Task {
 	Task() = default;
 	Task(const int fd, string func, string key)
-			: fd(fd), func(std::move(func)), key(std::move(key)) {}
+		: fd(fd), func(std::move(func)), key(std::move(key)) {}
 	Task(const int fd, string func, string key, string value)
-			: fd(fd), func(std::move(func)), key(std::move(key)), value(std::move(value)) {}
+		: fd(fd),
+		  func(std::move(func)),
+		  key(std::move(key)),
+		  value(std::move(value)) {}
 	string key;
 	string value;
 	string func;
@@ -22,7 +26,7 @@ struct Task {
 };
 
 class ThreadPool {
-private:
+   private:
 	vector<thread> threads;
 	const size_t numberOfThreads;
 	KVCache cache;
@@ -63,11 +67,11 @@ private:
 		}
 	}
 
-public:
+   public:
 	condition_variable cv_results;
 	ThreadPool(size_t numberOfThreads, size_t numberOfSets,
 			   size_t entriesPerSet)
-			: numberOfThreads(numberOfThreads), cache(numberOfSets, entriesPerSet) {
+		: numberOfThreads(numberOfThreads), cache(numberOfSets, entriesPerSet) {
 		for (size_t i = 0; i < numberOfThreads; i++) {
 			threads.emplace_back([this] { this->infiniteLoopFunction(); });
 		}

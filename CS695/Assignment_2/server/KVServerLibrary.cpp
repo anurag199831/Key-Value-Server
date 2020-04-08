@@ -3,12 +3,12 @@
 using namespace std;
 
 class KVServerResponseFormatter {
-private:
+   private:
 	const regex pattern;
 	string putResponse() {
 		string s =
-				"<?xml version=\"1.0\" encoding=\"UTF-8\"?><KVMessage "
-				"type=\"resp\"><Message>Success</Message></KVMessage>";
+			"<?xml version=\"1.0\" encoding=\"UTF-8\"?><KVMessage "
+			"type=\"resp\"><Message>Success</Message></KVMessage>";
 		return s;
 	}
 	string getResponse(const string& key, const string& value) {
@@ -19,21 +19,21 @@ private:
 	}
 	string deleteResponse() {
 		string s =
-				"<?xml version=\"1.0\" encoding=\"UTF-8\"?><KVMessage "
-				"type=\"resp\"><Message>Success</Message></KVMessage>";
+			"<?xml version=\"1.0\" encoding=\"UTF-8\"?><KVMessage "
+			"type=\"resp\"><Message>Success</Message></KVMessage>";
 		return s;
 	}
 
-public:
+   public:
 	KVServerResponseFormatter()
-			: pattern("type=\"(.*?)\"><Key>(.*?)</Key>(<Value>(.*?)</Value>)?") {}
+		: pattern("type=\"(.*?)\"><Key>(.*?)</Key>(<Value>(.*?)</Value>)?") {}
 	~KVServerResponseFormatter() = default;
 
 	string getMessage(const string& msg) {
 		string s =
-				"<?xml version=\"1.0\" encoding=\"UTF-8\"?><KVMessage "
-				"type=\"resp\"><Message>" +
-				msg + "</Message></KVMessage>";
+			"<?xml version=\"1.0\" encoding=\"UTF-8\"?><KVMessage "
+			"type=\"resp\"><Message>" +
+			msg + "</Message></KVMessage>";
 		return s;
 	}
 
@@ -85,10 +85,10 @@ public:
 };
 
 class KVStoreFormatter {
-private:
+   private:
 	const regex pattern;
 
-public:
+   public:
 	KVStoreFormatter() : pattern("<Key>(.*?)</Key><Value>(.*?)</Value>") {}
 	~KVStoreFormatter() = default;
 

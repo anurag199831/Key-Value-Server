@@ -2,14 +2,14 @@
 using namespace std;
 
 class KVClientHandler {
-private:
+   private:
 	ThreadPool pool;
 	KVServerResponseFormatter formatter;
 
-public:
+   public:
 	KVClientHandler(size_t numberOfThreads, size_t numberOfSets,
 					size_t entriesPerSet)
-			: pool(numberOfThreads, numberOfSets, entriesPerSet) {}
+		: pool(numberOfThreads, numberOfSets, entriesPerSet) {}
 	~KVClientHandler() = default;
 
 	pair<int, string> handle(int fd, const string& xml) {
@@ -30,7 +30,7 @@ public:
 			pool.addTaskToQueue(task);
 			output = pool.getResults();
 			output.second =
-					formatter.convertToXML(vec.at(0), vec.at(1), output.second);
+				formatter.convertToXML(vec.at(0), vec.at(1), output.second);
 		} else if (vec.size() == 3 and vec.at(0) == "put") {
 			if (vec.at(1).length() > 256) {
 				return make_pair(fd, formatter.getMessage("Oversized Key"));
@@ -40,11 +40,11 @@ public:
 			Task task(fd, vec.at(0), vec.at(1), vec.at(2));
 			pool.addTaskToQueue(task);
 			output.second =
-					formatter.convertToXML(vec.at(0), vec.at(1), output.second);
+				formatter.convertToXML(vec.at(0), vec.at(1), output.second);
 		} else {
 			return make_pair(fd,
 							 formatter.getMessage(
-									 "XML Error: Received unparseable message"));
+								 "XML Error: Received unparseable message"));
 		}
 		return output;
 	}
