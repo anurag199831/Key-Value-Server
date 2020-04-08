@@ -209,17 +209,34 @@ unordered_set<string> Client::_getAddressesFromFile(const string& file) {
 void Client::_updateServerConnections(const unordered_set<string>& ips) {
 	int sockfd;
 	unordered_set<string> inactiveServers;
-	transform(servers.begin(), servers.end(), back_inserter(inactiveServers),
+	transform(servers.begin(), servers.end(),
+			  inserter(inactiveServers, inactiveServers.begin()),
 			  [](const unordered_map<string, int>::value_type& val) {
 				  return val.first;
 			  });
 
 	for (auto&& i : ips) {
-		if (servers.find(i) == servers.end()) {
+		if (inactiveServers.find(i) == inactiveServers.end()) {
 			sockfd = _connectToServer(i, DEFAULT_SERVER_PORT);
 			if (sockfd != -1) {
+				cout << "Client::_updateServerConnections: Connected to " << i
+					 << endl;
 				servers[i] = sockfd;
+			} else {
+				cerr << "Client::_updateServerConnections: Error opening a "
+						"socket on "
+					 << i << endl;
 			}
+		} else {
+			inactiveServers.erase(i);
+		}
+
+		for (auto&& i : inactiveServers) {
+			cout << "Client::_updateServerConnections: Closing connection with "
+				 << i << endl;
+			sockfd = servers.at(i);
+			close(sockfd);
+			servers.erase(i);
 		}
 	}
 }
