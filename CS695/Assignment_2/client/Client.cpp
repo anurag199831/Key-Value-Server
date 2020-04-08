@@ -75,10 +75,10 @@ void Client::start(const string& inputFile, const string& outFile) {
 		"/home/pranav/Repos/IITB/CS695/Assignment_2/vm_manager/server.dat";
 
 	ifstream infile;
+
 	infile.open(inputFile, ifstream::in);
 	if (!infile.is_open()) {
 		cerr << "Client::start: Error opening: " << inputFile << endl;
-		infile.close();
 		exit(EXIT_FAILURE);
 	}
 
@@ -87,7 +87,6 @@ void Client::start(const string& inputFile, const string& outFile) {
 	if (!outfile.is_open()) {
 		cerr << "Client::start: Error creating: " << outFile << endl;
 		infile.close();
-		outfile.close();
 		exit(EXIT_FAILURE);
 	}
 
@@ -107,10 +106,10 @@ void Client::start(const string& inputFile, const string& outFile) {
 				  [](const unordered_map<string, int>::value_type& val) {
 					  return val.second;
 				  });
-
-		while (!(infile >> line) and request < BATCH_SIZE) {
+		this_thread::sleep_for(chrono::seconds(1));
+		while ((infile >> line) and request < BATCH_SIZE) {
 			request++;
-			sockfd = fds.at(request / fds.size());
+			sockfd = fds.at(request % fds.size());
 			idleCount = 0;
 
 			if (line.length() == 0) {
@@ -127,6 +126,7 @@ void Client::start(const string& inputFile, const string& outFile) {
 			} else {
 				line = "garbage";
 			}
+			cout << "Sending data to server. Request: " << request << endl;
 			status = write(sockfd, line.c_str(), line.length());
 			if (status == -1) {
 				cout << "Client::start: Error sending data to server" << endl;
@@ -134,7 +134,9 @@ void Client::start(const string& inputFile, const string& outFile) {
 			}
 			memset(buffer, 0, MAX_BUFFER_SIZE);
 			status = read(sockfd, buffer, MAX_BUFFER_SIZE);
+			cout << "Received data from server. Request: " << request << endl;
 			line = string(buffer);
+			cout << line << endl;
 			if (vec.at(0) == "get" or vec.at(0) == "GET") {
 				vec = formatter.parseXML(line);
 				if (vec.size() == 2) {
@@ -173,7 +175,6 @@ void Client::start(const string& inputFile, const string& outFile) {
 string Client::__readFile(const string& file) {
 	ifstream serverFile;
 	string retStr = "", str; /* code */
-	cout << "Trying to open file " << file << endl;
 	serverFile.open(file, ifstream::in);
 	if (!serverFile.is_open()) {
 		cerr << "Client::__readFile: Error opening file " << file << endl;
@@ -198,7 +199,6 @@ unordered_set<string> Client::_getAddressesFromFile(const string& file) {
 	string ip;
 
 	while ((ss >> ip)) {
-		cout << "Test: " << ip << endl;
 		if (formatter.validateIp(ip)) {
 			s.emplace(ip);
 		}
@@ -230,14 +230,13 @@ void Client::_updateServerConnections(const unordered_set<string>& ips) {
 		} else {
 			inactiveServers.erase(i);
 		}
-
-		for (auto&& i : inactiveServers) {
-			cout << "Client::_updateServerConnections: Closing connection with "
-				 << i << endl;
-			sockfd = servers.at(i);
-			close(sockfd);
-			servers.erase(i);
-		}
+	}
+	for (auto&& i : inactiveServers) {
+		cout << "Client::_updateServerConnections: Closing connection with "
+			 << i << endl;
+		sockfd = servers.at(i);
+		close(sockfd);
+		servers.erase(i);
 	}
 }
 
