@@ -15,8 +15,4 @@ int main(int argc, char* argv[]) {
 	string name2 = mgr.startNewVm();
 	// thread* th2 = mgr.launch(name2);
 	mgr.debugInfo();
-	cout << "Waiting for 15 secs...." << endl;
-	this_thread::sleep_for(chrono::seconds(60));
-	mgr.shutdown(name1);
-	mgr.shutdown(name2);
 }

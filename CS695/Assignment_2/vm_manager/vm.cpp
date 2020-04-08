@@ -250,6 +250,8 @@ unordered_map<string, vector<string>> VM::getInterfaceInfo() {
 			 << "Retrying for " << 30 - max_retry << " time" << endl;
 		cout << "VM::getInterfaceInfo: Waiting for VM to start" << endl;
 		this_thread::sleep_for(chrono::milliseconds(1000));
+		ifacesCount = virDomainInterfaceAddresses(
+			domPtr, &ifaces, VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE, 0);
 		max_retry--;
 	}
 	string hwaddr;
