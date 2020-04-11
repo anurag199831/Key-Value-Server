@@ -7,7 +7,7 @@ keys = list()
 for j in range(1):
     with open("input" + str(j) + ".csv", 'w') as file:
         writer = csv.writer(file)
-        for i in range(10000):
+        for i in range(1024*1024):
             func = random.choice(funcs)
             if(func.lower() == 'get' or func.lower() == 'del'):
                 try:

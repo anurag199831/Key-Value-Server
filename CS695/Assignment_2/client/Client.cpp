@@ -12,7 +12,7 @@
 #include "KVClientLibrary.cpp"
 
 #define MAX_BUFFER_SIZE 1024
-#define BATCH_SIZE 128
+#define BATCH_SIZE 1024 * 128
 #define DEFAULT_SERVER_PORT 9999
 #define MAX_IDLE_TIME 30
 
@@ -97,7 +97,7 @@ void Client::start(const string& inputFile, const string& outFile) {
 		if (servers.empty()) {
 			cout << "Client::start: No active servers found terminating after "
 				 << MAX_IDLE_TIME - idleCount << endl;
-			this_thread::sleep_for(chrono::milliseconds(1000));
+			this_thread::sleep_for(chrono::seconds(2));
 			idleCount++;
 			continue;
 		}
@@ -130,13 +130,18 @@ void Client::start(const string& inputFile, const string& outFile) {
 			status = write(sockfd, line.c_str(), line.length());
 			if (status == -1) {
 				cout << "Client::start: Error sending data to server" << endl;
-				continue;
+				break;
 			}
 			memset(buffer, 0, MAX_BUFFER_SIZE);
 			status = read(sockfd, buffer, MAX_BUFFER_SIZE);
-			cout << "Received data from server. Request: " << request << endl;
+			if (status == -1) {
+				cout << "Client::start: Error receiving data from server"
+					 << endl;
+				break;
+			}
+			cout << "Received data from server. Request: " << request
+				 << " fd: " << sockfd << endl;
 			line = string(buffer);
-			cout << line << endl;
 			if (vec.at(0) == "get" or vec.at(0) == "GET") {
 				vec = formatter.parseXML(line);
 				if (vec.size() == 2) {
@@ -153,6 +158,7 @@ void Client::start(const string& inputFile, const string& outFile) {
 					outfile << vec.at(0) << '\n';
 				} else {
 					cerr << "Error parsing put XML\n";
+					break;
 				}
 			} else if (vec.size() != 0 and
 					   (vec.at(0) == "del" or vec.at(0) == "DEL")) {
@@ -161,9 +167,11 @@ void Client::start(const string& inputFile, const string& outFile) {
 					outfile << vec.at(0) << '\n';
 				} else {
 					cerr << "Error parsing put XML\n";
+					break;
 				}
 			} else {
 				cerr << "Error parsing put XML\n";
+				break;
 			}
 			line = "";
 		}
@@ -242,5 +250,6 @@ void Client::_updateServerConnections(const unordered_set<string>& ips) {
 
 int main(int argc, char const* argv[]) {
 	Client client;
-	client.start("input0.csv", "out0.csv");
+	int random = rand() % 10;
+	client.start("input0.csv", ("out" + to_string(random) + ".csv").c_str());
 }
