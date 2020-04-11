@@ -13,6 +13,10 @@ class VM {
 		const virDomainStatsRecordPtr& record);
 	inline string GetTypedParamValue(const virTypedParameterPtr& item);
 
+	double convertStatMapToUtil(const unordered_map<string, string>& map);
+	long getVmState(const unordered_map<string, string>& map);
+	unordered_map<string, string> getStatsforDomain(const virConnectPtr& conn);
+
    public:
 	VM(const virConnectPtr& connPtr, const string& name);
 	VM(const virConnectPtr& connPtr);
@@ -24,8 +28,5 @@ class VM {
 	void shutdown();
 	string getIp();
 	unordered_map<string, vector<string>> getInterfaceInfo();
-	long getVmState(const unordered_map<string, string>& map);
-	unordered_map<string, string> getStatsforDomain(const virConnectPtr& conn);
-	double convertStatMapToUtil(const unordered_map<string, string>& map);
 	tuple<long, double> getVmCpuUtil(const virConnectPtr& conn);
 };

@@ -46,6 +46,10 @@ void Manager::startNewVm(const string &nameOfVm) {
 	} else {
 		try {
 			VM *vm = new VM(conn, nameOfVm);
+			cout
+				<< "Manager::startNewVm: Waiting for 30 secs for the VM to boot"
+				<< endl;
+			this_thread::sleep_for(chrono::seconds(30));
 			domains.insert(make_pair(nameOfVm, move(vm)));
 		} catch (exception &e) {
 			cout << e.what() << endl;
@@ -156,8 +160,7 @@ bool Manager::deleteIpFromFile(const string &ip) {
 		return false;
 	}
 	string line;
-	while (inputFile.eof()) {
-		inputFile >> line;
+	while (inputFile >> line) {
 		if (line == ip) {
 			cout << "Manager::deleteIpFromFile: " << ip << " deleted from file"
 				 << endl;
