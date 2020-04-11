@@ -12,6 +12,8 @@
 
 #include "KVClientHandler.cpp"
 
+#define DEFAULT_SERVER_PORT 9999
+
 using namespace std;
 
 class Server {
@@ -163,32 +165,13 @@ void printUsage(string s) {
 }
 
 int main(int argc, char const *argv[]) {
-	if (argc != 2) {
-		printUsage(string(argv[0]));
-	}
-
-	size_t port;
 	size_t threadPoolSize = 16;
 	size_t numSetsInCache = 64;
 	size_t sizeOfSet = 128;
 
-	string arg;
-	size_t pos = 0;
-	for (int i = 1; i < argc; i++) {
-		arg = string(argv[i]);
-		if (i == 1 and (pos = arg.find('=')) != string::npos) {
-			if (arg.substr(1, pos - 1) == "port") {
-				port = stoi(arg.substr(pos + 1, arg.length()));
-				// cout << port << endl;
-			} else {
-				printUsage(string(argv[0]));
-			}
-		} else {
-			printUsage(string(argv[0]));
-		}
-	}
+	Server server(DEFAULT_SERVER_PORT, threadPoolSize, numSetsInCache,
+				  sizeOfSet);
 
-	Server server(port, threadPoolSize, numSetsInCache, sizeOfSet);
 	server.init();
 	server.start();
 
