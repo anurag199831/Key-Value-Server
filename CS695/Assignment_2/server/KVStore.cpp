@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <fstream>
 #include <iostream>
+#include <utility>
 #include <vector>
 
 #include "KVServerLibrary.cpp"
@@ -14,8 +15,8 @@ class KVStore {
 	KVStoreFormatter formatter;
 
    public:
-	KVStore(const string& path, const size_t maxNumberOfFiles)
-		: pathToDatabase(path), maxNumberOfFiles(maxNumberOfFiles) {}
+	KVStore(string  path, const size_t maxNumberOfFiles)
+		: pathToDatabase(std::move(path)), maxNumberOfFiles(maxNumberOfFiles) {}
 
 	explicit KVStore(const size_t maxNumberOfFiles)
 		: maxNumberOfFiles(maxNumberOfFiles) {}
@@ -125,7 +126,7 @@ class KVStore {
 		return delFlag;
 	}
 
-	// bool dumpToFile(string key, string value) { return true; }
+
 	vector<pair<string, string>> restoreFromFile(const size_t fileId,
 												 const size_t numberOfEntries) {
 		vector<pair<string, string>> vec;
@@ -153,4 +154,3 @@ class KVStore {
 	}
 };
 
-// int main(int argc, char const* argv[]) {}

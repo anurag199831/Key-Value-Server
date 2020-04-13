@@ -1,5 +1,4 @@
 #include <arpa/inet.h>
-#include <fcntl.h>
 #include <netinet/in.h>
 #include <unistd.h>
 
@@ -12,7 +11,7 @@
 #include "KVClientLibrary.cpp"
 
 #define MAX_BUFFER_SIZE 1024
-#define BATCH_SIZE 1024 * 128
+#define BATCH_SIZE 1024 * 16
 #define DEFAULT_SERVER_PORT 9999
 #define MAX_IDLE_TIME 30
 
@@ -25,21 +24,19 @@ class Client {
 
 	int _connectToServer(const string& ip, int port);
 	string __readFile(const string& file);
-	bool _validateIp(const string& str);
 	unordered_set<string> _getAddressesFromFile(const string& file);
 	void _updateServerConnections(const unordered_set<string>& ips);
 
    public:
 	Client();
-	Client(const string& ip, int port);
 	~Client();
 
 	void start(const string& inputFile, const string& outFile);
 };
 
-Client::Client() {}
+Client::Client() = default;
 
-Client::~Client() {}
+Client::~Client() = default;
 
 int Client::_connectToServer(const string& ip, int port) {
 	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -251,5 +248,5 @@ void Client::_updateServerConnections(const unordered_set<string>& ips) {
 int main(int argc, char const* argv[]) {
 	Client client;
 	int random = rand() % 10;
-	client.start("input0.csv", ("out" + to_string(random) + ".csv").c_str());
+	client.start("input0.csv", "out" + to_string(random) + ".csv");
 }

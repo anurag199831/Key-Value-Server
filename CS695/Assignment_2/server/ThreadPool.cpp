@@ -98,7 +98,7 @@ class ThreadPool {
 		return top;
 	}
 
-	void addTaskToQueue(Task task) {
+	void addTaskToQueue(const Task& task) {
 		{
 			unique_lock<mutex> lock(queueMutex);
 			q.push(task);

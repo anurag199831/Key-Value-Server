@@ -1,9 +1,9 @@
 #include "manager.h"
 
 #include <fcntl.h>
-#include <unistd.h>
 
 #include <algorithm>
+#include <cstdio>
 #include <fstream>
 #include <functional>
 #include <stack>
@@ -32,7 +32,11 @@ string Manager::startNewVm() {
 	try {
 		VM *vm = new VM(conn);
 		name = vm->getName();
+		cout << "Manager::startNewVm: Waiting for 30 secs for the VM to boot"
+			 << endl;
+		this_thread::sleep_for(chrono::seconds(30));
 		domains.insert(make_pair(name, move(vm)));
+		notify();
 	} catch (exception &e) {
 		cout << e.what() << endl;
 	}
@@ -51,13 +55,14 @@ void Manager::startNewVm(const string &nameOfVm) {
 				<< endl;
 			this_thread::sleep_for(chrono::seconds(30));
 			domains.insert(make_pair(nameOfVm, move(vm)));
+			notify();
 		} catch (exception &e) {
 			cout << e.what() << endl;
 		}
 	}
 }
 
-void Manager::watch(string nameOfVm) {
+void Manager::_watch(string nameOfVm) {
 	class Worker {
 		stack<function<void(string)>> exit_funcs;
 		string nameOfVm;
@@ -74,12 +79,15 @@ void Manager::watch(string nameOfVm) {
 		}
 		void add(function<void(string)> func) { exit_funcs.push(move(func)); }
 	};
+
 	thread_local Worker threadWorker(std::move(nameOfVm));
-	threadWorker.add([this](const string &nameOfVm) {
-		VM *vm = domains.at(nameOfVm);
-		domains.erase(nameOfVm);
-		delete vm;
-	});
+
+	// threadWorker.add([this](const string &nameOfVm) {
+	// 	VM *vm = domains.at(nameOfVm);
+	// 	domains.erase(nameOfVm);
+	// 	delete vm;
+	// });
+
 	threadWorker.add([this](const string &nameOfVm) {
 		bool flag = true;
 		long status = 0;
@@ -103,8 +111,8 @@ void Manager::watch(string nameOfVm) {
 	});
 }
 
-thread *Manager::launch(const string &nameOfVm) {
-	auto *th = new thread([this, nameOfVm]() { watch(nameOfVm); });
+thread *Manager::startWatching(const string &nameOfVm) {
+	auto *th = new thread([this, nameOfVm]() { _watch(nameOfVm); });
 	return th;
 }
 
@@ -112,43 +120,44 @@ void Manager::shutdown(const string &nameOfVm) {
 	VM *vm;
 	try {
 		vm = domains.at(nameOfVm);
-		cout << "Deleteing IP " << vm->getIp() << endl;
-		deleteIpFromFile(vm->getIp());
+		cout << "Deleting IP " << vm->getIp() << endl;
+		_deleteIpFromFile(vm->getIp());
 		vm->shutdown();
 	} catch (exception &e) {
 		cout << e.what() << endl;
 	}
 }
 
-void Manager::debugInfo() {
-	cout << "Is domains vectorEmpty? :" << domains.empty() << endl;
+void Manager::notify() {
+	// cout << "Is domains vectorEmpty? :" << domains.empty() << endl;
+	remove(ipFile.c_str());
 	for (auto &&i : domains) {
-		cout << "Domain: " << i.second->getName() << endl;
+		// cout << "Domain: " << i.second->getName() << endl;
 		auto m = i.second->getInterfaceInfo();
 		for (auto &&i : m) {
-			cout << "hwaddr: " << i.first << endl;
+			// cout << "hwaddr: " << i.first << endl;
 			for (auto &j : i.second) {
-				cout << "nwaddr: " << j << endl;
-				writeIpToFile(j);
+				// cout << "nwaddr: " << j << endl;
+				_writeIpToFile(j);
 			}
 		}
 	}
 }
 
-bool Manager::writeIpToFile(const string &ip) {
-	ofstream serverfile;
-	serverfile.open(ipFile, fstream ::out | fstream::app);
-	if (!serverfile.is_open()) {
+bool Manager::_writeIpToFile(const string &ip) {
+	ofstream serverFile;
+	serverFile.open(ipFile, fstream ::out | fstream::app);
+	if (!serverFile.is_open()) {
 		cerr << "Manager::writeToFile: Error opening file " << ipFile << endl;
 		return false;
 	}
 
-	serverfile << ip << endl;
-	serverfile.close();
+	serverFile << ip << endl;
+	serverFile.close();
 	return true;
 }
 
-bool Manager::deleteIpFromFile(const string &ip) {
+bool Manager::_deleteIpFromFile(const string &ip) {
 	ifstream inputFile;
 	ofstream outFile;
 	inputFile.open(ipFile, ifstream::in);
@@ -168,6 +177,8 @@ bool Manager::deleteIpFromFile(const string &ip) {
 			outFile << line << endl;
 		}
 	}
+	inputFile.close();
+	outFile.close();
 	remove(ipFile.c_str());
 	rename((ipFile + "_temp").c_str(), ipFile.c_str());
 	return true;

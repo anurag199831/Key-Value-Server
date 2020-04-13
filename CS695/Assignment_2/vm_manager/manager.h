@@ -13,9 +13,9 @@ class Manager {
 	unordered_map<string, VM*> domains;
 	const string ipFile = "server.dat";
 
-	void watch(string nameOfVm);
-	bool writeIpToFile(const string& ip);
-	bool deleteIpFromFile(const string& ip);
+	void _watch(string nameOfVm);
+	bool _writeIpToFile(const string& ip);
+	bool _deleteIpFromFile(const string& ip);
 
    public:
 	Manager();
@@ -23,6 +23,6 @@ class Manager {
 	string startNewVm();
 	void shutdown(const string& nameOfVm);
 	void startNewVm(const string& nameOfVm);
-	thread* launch(const string& nameOfVm);
-	void debugInfo();
+	thread* startWatching(const string& nameOfVm);
+	void notify();
 };

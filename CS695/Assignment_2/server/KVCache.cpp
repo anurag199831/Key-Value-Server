@@ -209,30 +209,3 @@ class KVCache {
 	}
 };
 
-// int main(int argc, char const *argv[]) {
-//     KVCache k(20, 32);
-//     string func, key, value;
-//     while (true) {
-//         cout << "command: ";
-//         cin >> func;
-//         // cout << "func:" << func << endl;
-//         if (func == "get") {
-//             cin >> key;
-//             // cout << "key:" << key << endl;
-//             cout << k.operateOnCache(func, key, value) << "\n";
-//         } else if (func == "put") {
-//             cin >> key >> value;
-//             // cout << "key:" << key << " value: " << value;
-//             k.operateOnCache(func, key, value);
-//         } else if (func == "del") {
-//             cin >> key;
-//             k.operateOnCache(func, key, value);
-//         } else if (func == "print") {
-//             k.printCache();
-//         } else if (func == "exit") {
-//             exit(EXIT_SUCCESS);
-//         } else {
-//             cout << "Invalid function\n";
-//         }
-//     }
-// }
