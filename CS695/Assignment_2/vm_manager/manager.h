@@ -24,5 +24,6 @@ class Manager {
 	void shutdown(const string& nameOfVm);
 	void startNewVm(const string& nameOfVm);
 	thread* startWatching(const string& nameOfVm);
-	void notify();
+	void notifyAboutServer();
+	size_t numActiveDomains();
 };

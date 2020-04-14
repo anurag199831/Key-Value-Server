@@ -26,6 +26,29 @@
                 }
             ],
             "miDebuggerPath": "/usr/bin/gdb",
+        },
+        {
+            "name": "g++ build and debug gtkmm active file",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${fileDirname}/${fileBasenameNoExtension}.out",
+            "args": [
+                "-l"
+            ],
+            "stopAtEntry": false,
+            "cwd": "/usr/bin",
+            "environment": [],
+            "externalConsole": false,
+            "preLaunchTask": "g++ gtkmm build active file",
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true,
+                }
+            ],
+            "miDebuggerPath": "/usr/bin/gdb",
         }
     ]
 }

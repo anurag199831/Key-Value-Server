@@ -36,7 +36,7 @@ string Manager::startNewVm() {
 			 << endl;
 		this_thread::sleep_for(chrono::seconds(30));
 		domains.insert(make_pair(name, move(vm)));
-		notify();
+		notifyAboutServer();
 	} catch (exception &e) {
 		cout << e.what() << endl;
 	}
@@ -55,7 +55,7 @@ void Manager::startNewVm(const string &nameOfVm) {
 				<< endl;
 			this_thread::sleep_for(chrono::seconds(30));
 			domains.insert(make_pair(nameOfVm, move(vm)));
-			notify();
+			notifyAboutServer();
 		} catch (exception &e) {
 			cout << e.what() << endl;
 		}
@@ -128,7 +128,7 @@ void Manager::shutdown(const string &nameOfVm) {
 	}
 }
 
-void Manager::notify() {
+void Manager::notifyAboutServer() {
 	// cout << "Is domains vectorEmpty? :" << domains.empty() << endl;
 	remove(ipFile.c_str());
 	for (auto &&i : domains) {
@@ -183,3 +183,5 @@ bool Manager::_deleteIpFromFile(const string &ip) {
 	rename((ipFile + "_temp").c_str(), ipFile.c_str());
 	return true;
 }
+
+size_t Manager::numActiveDomains() { return domains.size(); }
