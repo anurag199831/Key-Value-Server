@@ -26,7 +26,8 @@
             "name": "Cygwin",
             "includePath": [
                 "${workspaceFolder}/**",
-                "D:/cygwin64/usr/include/**"
+                "D:/cygwin64/usr/include/**",
+                "D:/cygwin64/usr/x86_64-pc-cygwin/lib/**"
             ],
             "defines": [],
             "compilerPath": "D:/cygwin64/bin/gcc",
