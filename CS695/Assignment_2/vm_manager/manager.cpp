@@ -21,6 +21,15 @@ Manager::Manager() {
 
 Manager::~Manager() {
 	for (auto &&i : domains) {
+		cout << "Manager::~Manager: " << i.first << " VM deleted";
+		delete i.second;
+	}
+	for (auto &&i : locks) {
+		cout << "Manager::~Manager: " << i.first << " mutex deleted";
+		delete i.second;
+	}
+	for (auto &&i : utilVec) {
+		cout << "Manager::~Manager: " << i.first << " util vector deleted";
 		delete i.second;
 	}
 	virConnectClose(conn);
@@ -31,11 +40,17 @@ string Manager::startNewVm() {
 	string name;
 	try {
 		VM *vm = new VM(conn);
+		mutex *m = new mutex;
+		vector<int> *vec = new vector<int>();
+
 		name = vm->getName();
 		cout << "Manager::startNewVm: Waiting for 30 secs for the VM to boot"
 			 << endl;
+
 		this_thread::sleep_for(chrono::seconds(30));
 		domains.insert(make_pair(name, move(vm)));
+		utilVec.insert(make_pair(name, vec));
+		locks.insert(make_pair(name, m));
 		notifyAboutServer();
 	} catch (exception &e) {
 		cout << e.what() << endl;
@@ -50,11 +65,16 @@ void Manager::startNewVm(const string &nameOfVm) {
 	} else {
 		try {
 			VM *vm = new VM(conn, nameOfVm);
+			mutex *m = new mutex;
+			vector<int> *vec = new vector<int>();
+
 			cout
 				<< "Manager::startNewVm: Waiting for 30 secs for the VM to boot"
 				<< endl;
 			this_thread::sleep_for(chrono::seconds(30));
 			domains.insert(make_pair(nameOfVm, move(vm)));
+			utilVec.insert(make_pair(nameOfVm, vec));
+			locks.insert(make_pair(nameOfVm, m));
 			notifyAboutServer();
 		} catch (exception &e) {
 			cout << e.what() << endl;
@@ -118,11 +138,22 @@ thread *Manager::startWatching(const string &nameOfVm) {
 
 void Manager::shutdown(const string &nameOfVm) {
 	VM *vm;
+	mutex *m;
+	vector<int> *vec;
 	try {
 		vm = domains.at(nameOfVm);
+		m = locks.at(nameOfVm);
+		vec = utilVec.at(nameOfVm);
 		cout << "Deleting IP " << vm->getIp() << endl;
 		_deleteIpFromFile(vm->getIp());
 		vm->shutdown();
+		delete vm;
+		delete m;
+		delete vec;
+		domains.erase(nameOfVm);
+		utilVec.erase(nameOfVm);
+		locks.erase(nameOfVm);
+
 	} catch (exception &e) {
 		cout << e.what() << endl;
 	}
