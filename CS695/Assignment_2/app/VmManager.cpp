@@ -1,6 +1,8 @@
 #include "VmManager.h"
 
+#include <gtkmm/box.h>
 #include <iostream>
+#include "graph.h"
 
 VmManager::VmManager() {
     // This just sets the title of our new window.
@@ -24,15 +26,25 @@ VmManager::VmManager() {
     m_grid1.set_row_homogeneous(true);
     m_grid1.set_column_homogeneous(true);
     m_grid1.set_border_width(10);
-    updateViews();
+    _updateViews();
     show_all_children();
 }
 
 VmManager::~VmManager() {}
 
-void VmManager::updateViews() {
+void VmManager::_updateViews() {
     auto numberOfdomains = mgr.numActiveDomains();
     for (size_t i = 0; i < numberOfdomains; i++) {
         mBoxVec.emplace_back();
+        __getBoxWithWidgets(mBoxVec.at(i));
     }
+}
+
+void __getBoxWithWidgets(Gtk::Box &box) {
+    Gtk::Label *lbl = new Gtk::Label();
+    Graph *draw = new Graph();
+
+    box.set_orientation(Gtk::Orientation::ORIENTATION_VERTICAL);
+    box.add(*lbl);
+    box.add(*draw);
 }

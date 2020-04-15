@@ -27,7 +27,16 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "D:/cygwin64/usr/include/**",
-                "D:/cygwin64/usr/x86_64-pc-cygwin/lib/**"
+                "D:/cygwin64/lib/cairomm-1.0/include/**",
+                "D:/cygwin64/lib/gtkmm-3.0/include/**",
+                "D:/cygwin64/lib/glibmm-2.4/include/**",
+                "D:/cygwin64/lib/pangomm-1.4/include/**",
+                "D:/cygwin64/lib/giomm-2.4/include/**",
+                "D:/cygwin64/lib/gdkmm-3.0/include/**",
+                "D:/cygwin64/lib/atkmm-1.6/include/**",
+                "D:/cygwin64/lib/glib-2.0/include/**",
+                "D:/cygwin64/lib/dbus-1.0/include/**",
+                "D:/cygwin64/lib/sigc++-2.0/include/**"
             ],
             "defines": [],
             "compilerPath": "D:/cygwin64/bin/gcc",
