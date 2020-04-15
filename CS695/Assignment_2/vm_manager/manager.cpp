@@ -21,15 +21,16 @@ Manager::Manager() {
 
 Manager::~Manager() {
     for (auto &&i : domains) {
-        cout << "Manager::~Manager: " << i.first << " VM deleted";
+        cout << "Manager::~Manager: " << i.first << " VM deleted" << endl;
         delete i.second;
     }
     for (auto &&i : locks) {
-        cout << "Manager::~Manager: " << i.first << " mutex deleted";
+        cout << "Manager::~Manager: " << i.first << " mutex deleted" << endl;
         delete i.second;
     }
     for (auto &&i : utilList) {
-        cout << "Manager::~Manager: " << i.first << " util list deleted";
+        cout << "Manager::~Manager: " << i.first << " util list deleted"
+             << endl;
         delete i.second;
     }
     virConnectClose(conn);
