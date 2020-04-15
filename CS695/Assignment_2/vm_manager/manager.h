@@ -1,6 +1,7 @@
 #include <libvirt/libvirt.h>
 
 #include <iostream>
+#include <list>
 #include <mutex>
 #include <unordered_map>
 
@@ -10,24 +11,25 @@ using namespace std;
 
 class Manager {
    private:
-	virConnectPtr conn;
-	unordered_map<string, VM*> domains;
-	unordered_map<string, mutex*> locks;
-	unordered_map<string, vector<int>*> utilVec;
-	const string ipFile = "server.dat";
+    virConnectPtr conn;
+    unordered_map<string, VM*> domains;
+    unordered_map<string, mutex*> locks;
+    unordered_map<string, list<int>*> utilList;
+    const string ipFile = "server.dat";
 
-	void _watch(string nameOfVm);
-	bool _writeIpToFile(const string& ip);
-	bool _deleteIpFromFile(const string& ip);
+    void _watch(string nameOfVm);
+    bool _writeIpToFile(const string& ip);
+    bool _deleteIpFromFile(const string& ip);
 
    public:
-	Manager();
-	~Manager();
-	string startNewVm();
-	void shutdown(const string& nameOfVm);
-	void startNewVm(const string& nameOfVm);
-	thread* startWatching(const string& nameOfVm);
+    Manager();
+    ~Manager();
+    string startNewVm();
+    void shutdown(const string& nameOfVm);
+    void startNewVm(const string& nameOfVm);
+    thread* startWatching(const string& nameOfVm);
+    vector<int> getUtilVector(const string& nameOfVm);
 
-	void notifyAboutServer();
-	size_t numActiveDomains();
+    void notifyAboutServer();
+    size_t numActiveDomains();
 };

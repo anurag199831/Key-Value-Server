@@ -14,11 +14,23 @@
                 "/usr/lib/x86_64-linux-gnu/atkmm-1.6/include/**",
                 "/usr/lib/x86_64-linux-gnu/glib-2.0/include/**",
                 "/usr/lib/x86_64-linux-gnu/dbus-1.0/include/**",
-                "/usr/lib/x86_64-linux-gnu/sigc++-2.0/include/"
+                "/usr/lib/x86_64-linux-gnu/sigc++-2.0/include/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
-            "intelliSenseMode": "clang-x64",
+            "intelliSenseMode": "gcc-x64",
+            "cStandard": "c11",
+            "cppStandard": "c++17"
+        },
+        {
+            "name": "Cygwin",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "D:/cygwin64/usr/include/**"
+            ],
+            "defines": [],
+            "compilerPath": "D:/cygwin64/bin/gcc",
+            "intelliSenseMode": "gcc-x64",
             "cStandard": "c11",
             "cppStandard": "c++17"
         }
