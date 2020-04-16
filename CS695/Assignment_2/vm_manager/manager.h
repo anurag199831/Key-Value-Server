@@ -11,25 +11,27 @@ using namespace std;
 
 class Manager {
    private:
-    virConnectPtr conn;
-    unordered_map<string, VM*> domains;
-    unordered_map<string, mutex*> locks;
-    unordered_map<string, list<int>*> utilList;
-    const string ipFile = "server.dat";
+	virConnectPtr conn;
+	unordered_map<string, VM*> domains;
+	unordered_map<string, mutex*> locks;
+	unordered_map<string, list<int>*> utilList;
+	unordered_map<string, bool> threadTerminationFlags;
+	unordered_map<string, mutex*> threadTerminationLocks;
+	const string ipFile = "server.dat";
 
-    void _watch(string nameOfVm);
-    bool _writeIpToFile(const string& ip);
-    bool _deleteIpFromFile(const string& ip);
+	void _watch(string nameOfVm);
+	bool _writeIpToFile(const string& ip);
+	bool _deleteIpFromFile(const string& ip);
 
    public:
-    Manager();
-    ~Manager();
-    string startNewVm();
-    void shutdown(const string& nameOfVm);
-    void startNewVm(const string& nameOfVm);
-    thread* startWatching(const string& nameOfVm);
-    vector<int> getUtilVector(const string& nameOfVm);
+	Manager();
+	~Manager();
+	string startNewVm();
+	void shutdown(const string& nameOfVm);
+	void startNewVm(const string& nameOfVm);
+	thread* startWatching(const string& nameOfVm);
+	vector<int> getUtilVector(const string& nameOfVm);
 
-    void notifyAboutServer();
-    size_t numActiveDomains();
+	void notifyAboutServer();
+	size_t numActiveDomains();
 };

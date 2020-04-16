@@ -31,6 +31,11 @@
         "bitset": "cpp",
         "cstdlib": "cpp",
         "shared_mutex": "cpp",
-        "regex": "cpp"
+        "regex": "cpp",
+        "cstdio": "cpp",
+        "list": "cpp",
+        "deque": "cpp",
+        "vector": "cpp",
+        "functional": "cpp"
     }
 }
