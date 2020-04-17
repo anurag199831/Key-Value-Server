@@ -25,6 +25,7 @@ class VM {
 	static vector<string> getInactiveDomainNames(const virConnectPtr& conn);
 
 	string getName();
+	void powerOn();
 	void shutdown();
 	string getIp();
 	unordered_map<string, vector<string>> getInterfaceInfo();
