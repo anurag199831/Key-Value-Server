@@ -176,7 +176,11 @@ void VM::powerOn() {
 		cerr << "VM::startAnyInactiveDomain: Unable to boot guest "
 				"configuration for "
 			 << getName() << endl;
+		return;
 	}
+	cout << "VM::powerOn: Powering on VM: Waiting for 30 seconds to boot"
+		 << endl;
+	this_thread::sleep_for(chrono::seconds(30));
 }
 
 // Shuts down the running VM
