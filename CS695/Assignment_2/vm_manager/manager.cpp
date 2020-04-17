@@ -57,15 +57,17 @@ string Manager::startNewVm() {
 	string name;
 	try {
 		VM *vm = new VM(conn);
+		vm->powerOn();
+		cout << "Manager::startNewVm: Waiting for 30 secs for the VM to boot"
+			 << endl;
+		this_thread::sleep_for(chrono::seconds(30));
+
 		mutex *m = new mutex;
 		mutex *n = new mutex;
 		list<int> *lst = new list<int>();
 		bool terminationFlag = true;
 		name = vm->getName();
-		cout << "Manager::startNewVm: Waiting for 30 secs for the VM to boot"
-			 << endl;
 
-		this_thread::sleep_for(chrono::seconds(30));
 		domains.insert(make_pair(name, move(vm)));
 		utilList.insert(make_pair(name, lst));
 		locks.insert(make_pair(name, m));
@@ -85,14 +87,16 @@ void Manager::startNewVm(const string &nameOfVm) {
 	} else {
 		try {
 			VM *vm = new VM(conn, nameOfVm);
-			mutex *m = new mutex;
-			mutex *n = new mutex;
-			list<int> *lst = new list<int>();
-			bool terminationFlag = true;
+			vm->powerOn();
 			cout
 				<< "Manager::startNewVm: Waiting for 30 secs for the VM to boot"
 				<< endl;
 			this_thread::sleep_for(chrono::seconds(30));
+			mutex *m = new mutex;
+			mutex *n = new mutex;
+			list<int> *lst = new list<int>();
+			bool terminationFlag = true;
+
 			domains.insert(make_pair(nameOfVm, move(vm)));
 			utilList.insert(make_pair(nameOfVm, lst));
 			locks.insert(make_pair(nameOfVm, m));
@@ -298,4 +302,8 @@ vector<int> Manager::getUtilVector(const string &nameOfVm) {
 		vec.push_back(i);
 	}
 	return vec;
+}
+
+vector<string> Manager::getAllDefinedDomainNames() {
+	return VM::getAllDefinedDomainNames(conn);
 }

@@ -34,6 +34,6 @@ class VM {
 	tuple<long, double> getVmCpuUtil(const virConnectPtr& conn);
 
 	// static functions
-	static vector<string> getAllDefinedDomainNames();
+	static vector<string> getAllDefinedDomainNames(const virConnectPtr& conn);
 	static vector<string> getInactiveDomainNames(const virConnectPtr& conn);
 };

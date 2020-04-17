@@ -32,6 +32,7 @@ class Manager {
 	void startNewVm(const string& nameOfVm);
 	thread* startWatching(const string& nameOfVm);
 	vector<int> getUtilVector(const string& nameOfVm);
+	vector<string> getAllDefinedDomainNames();
 
 	void notifyAboutServer();
 	size_t numActiveDomains();

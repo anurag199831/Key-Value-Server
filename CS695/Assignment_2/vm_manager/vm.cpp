@@ -345,7 +345,7 @@ vector<string> VM::getInactiveDomainNames(const virConnectPtr &conn) {
 	return names;
 }
 
-vector<string> VM::getInactiveDomainNames(const virConnectPtr &conn) {
+vector<string> VM::getAllDefinedDomainNames(const virConnectPtr &conn) {
 	vector<string> vec;
 	virDomainPtr *domains;
 	int ret = virConnectListAllDomains(conn, &domains, 0);
@@ -356,7 +356,7 @@ vector<string> VM::getInactiveDomainNames(const virConnectPtr &conn) {
 		return vec;
 	}
 	string str;
-	for (size_t i = 0; i < ret; i++) {
+	for (int i = 0; i < ret; i++) {
 		const char *name = virDomainGetName(domains[i]);
 		str = string(name);
 		if (not str.empty()) {
