@@ -9,10 +9,12 @@ class VM {
    private:
 	virDomainPtr domPtr;
 
+	// Inline private member functions
 	inline unordered_map<string, string> _getDomainStatRecordMap(
 		const virDomainStatsRecordPtr& record);
 	inline string _getTypedParamValue(const virTypedParameterPtr& item);
 
+	// private member functions
 	double _convertStatMapToUtil(const unordered_map<string, string>& map);
 	long _getVmStateFromMap(const unordered_map<string, string>& map);
 	unordered_map<string, string> _getStatsforDomain(const virConnectPtr& conn);
@@ -22,13 +24,16 @@ class VM {
 	explicit VM(const virConnectPtr& connPtr);
 	~VM();
 
-	static vector<string> getInactiveDomainNames(const virConnectPtr& conn);
-
+	// member functions
 	string getName();
-	void powerOn();
-	void shutdown();
+	bool powerOn();
+	bool shutdown();
 	string getIp();
+	bool isPoweredOn();
 	unordered_map<string, vector<string>> getInterfaceInfo();
 	tuple<long, double> getVmCpuUtil(const virConnectPtr& conn);
-	bool isPoweredOn();
+
+	// static functions
+	static vector<string> getAllDefinedDomainNames();
+	static vector<string> getInactiveDomainNames(const virConnectPtr& conn);
 };

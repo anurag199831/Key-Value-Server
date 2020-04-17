@@ -27,6 +27,7 @@ class Manager {
 	Manager();
 	~Manager();
 	string startNewVm();
+	void powerOn(const string& nameOfVm);
 	void shutdown(const string& nameOfVm);
 	void startNewVm(const string& nameOfVm);
 	thread* startWatching(const string& nameOfVm);

@@ -113,24 +113,6 @@ unordered_map<string, string> VM::_getDomainStatRecordMap(
 	return map;
 }
 
-// Returns a vector of strings representing the names of the inactive vms.
-// Returns empty vector if no inactive VMs found.
-vector<string> VM::getInactiveDomainNames(const virConnectPtr &conn) {
-	vector<string> names;
-	int numDomains = virConnectNumOfDefinedDomains(conn);
-	if (numDomains == -1) {
-		return names;
-	}
-	names.reserve(numDomains);
-	char *inactiveDomainsNames[numDomains];
-	numDomains =
-		virConnectListDefinedDomains(conn, inactiveDomainsNames, numDomains);
-	for (int i = 0; i < numDomains; i++) {
-		names.emplace_back(inactiveDomainsNames[i]);
-	}
-	return names;
-}
-
 // Returns a stat map for the given domain.
 // Returns empty map otherwise.
 unordered_map<string, string> VM::_getStatsforDomain(
@@ -171,22 +153,25 @@ unordered_map<string, string> VM::_getStatsforDomain(
 }
 
 // Power on the VM.
-void VM::powerOn() {
+bool VM::powerOn() {
 	if (virDomainCreate(domPtr) < 0) {
 		cerr << "VM::startAnyInactiveDomain: Unable to boot guest "
 				"configuration for "
 			 << getName() << endl;
-		return;
+		return false;
 	}
-	cout << "VM::powerOn: Powering on VM: Waiting for 30 seconds to boot"
-		 << endl;
-	this_thread::sleep_for(chrono::seconds(30));
+	return true;
 }
 
 // Shuts down the running VM
-void VM::shutdown() {
+bool VM::shutdown() {
 	cout << "VM::shutdown: Shutting down :" << getName() << endl;
-	virDomainShutdown(domPtr);
+	if (virDomainShutdown(domPtr) == -1) {
+		cerr << "VM::shutdown: call to virDomainShutdown for " << getName()
+			 << endl;
+		return false;
+	}
+	return true;
 }
 
 // Returns the name of the VM.
@@ -336,4 +321,49 @@ bool VM::isPoweredOn() {
 		return false;
 	}
 	return true;
+}
+
+// ##########################################################################
+// #####################  STATIC FUNCTIONS HERE  ############################
+// ##########################################################################
+
+// Returns a vector of strings representing the names of the inactive vms.
+// Returns empty vector if no inactive VMs found.
+vector<string> VM::getInactiveDomainNames(const virConnectPtr &conn) {
+	vector<string> names;
+	int numDomains = virConnectNumOfDefinedDomains(conn);
+	if (numDomains == -1) {
+		return names;
+	}
+	names.reserve(numDomains);
+	char *inactiveDomainsNames[numDomains];
+	numDomains =
+		virConnectListDefinedDomains(conn, inactiveDomainsNames, numDomains);
+	for (int i = 0; i < numDomains; i++) {
+		names.emplace_back(inactiveDomainsNames[i]);
+	}
+	return names;
+}
+
+vector<string> VM::getInactiveDomainNames(const virConnectPtr &conn) {
+	vector<string> vec;
+	virDomainPtr *domains;
+	int ret = virConnectListAllDomains(conn, &domains, 0);
+	if (ret < 0) {
+		cerr << "VM::getInactiveDomainNames: call to virConnectListAllDomains "
+				"failed"
+			 << endl;
+		return vec;
+	}
+	string str;
+	for (size_t i = 0; i < ret; i++) {
+		const char *name = virDomainGetName(domains[i]);
+		str = string(name);
+		if (not str.empty()) {
+			vec.emplace_back(str);
+		}
+		virDomainFree(domains[i]);
+	}
+	free(domains);
+	return vec;
 }
