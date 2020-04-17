@@ -16,7 +16,13 @@ VM::VM(const virConnectPtr &connPtr, const string &name) {
     }
     domPtr = virDomainLookupByName(connPtr, name.c_str());
     if (domPtr == NULL) {
-        throw runtime_error("VM::VM(): call failed to virDomainLookupByName");
+        throw runtime_error("VM::VM(): call failed to virDomainLookupByName\n");
+    }
+    if (virDomainCreate(domPtr) < 0) {
+        throw runtime_error(
+            ("VM::startAnyInactiveDomain: Unable to boot guest "
+             "configuration for" +
+             name));
     }
 }
 
@@ -32,6 +38,10 @@ VM::VM(const virConnectPtr &conn) {
         cout << "VM::startAnyInactiveDomain: starting domain with name "
              << inactiveDomains.at(0) << endl;
         dom = virDomainLookupByName(conn, inactiveDomains.at(0).c_str());
+        if (domPtr == NULL) {
+            throw runtime_error(
+                "VM::VM(): call failed to virDomainLookupByName\n");
+        }
         if (virDomainCreate(dom) < 0) {
             throw runtime_error(
                 ("VM::startAnyInactiveDomain: Unable to boot guest "
@@ -263,7 +273,7 @@ unordered_map<string, vector<string>> VM::getInterfaceInfo() {
     vector<string> naddrs;
     for (int i = 0; i < ifacesCount; i++) {
         hwaddr = string(ifaces[i]->hwaddr);
-        for (uint j = 0; j < ifaces[i]->naddrs; j++) {
+        for (uint32_t j = 0; j < ifaces[i]->naddrs; j++) {
             if (ifaces[i]->addrs[j].type == 0) {
                 naddrs.emplace_back(ifaces[i]->addrs[j].addr);
             };
