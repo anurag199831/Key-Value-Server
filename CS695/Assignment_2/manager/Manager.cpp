@@ -1,4 +1,9 @@
-#include "manager.h"
+//
+// Created by pranav on 18/04/20.
+//
+
+#include "Manager.h"
+
 
 #include <fcntl.h>
 
@@ -9,6 +14,7 @@
 #include <stack>
 #include <thread>
 #include <utility>
+#include <vector>
 
 #define MAX_BUFFER_SIZE 1024
 
@@ -57,23 +63,17 @@ string Manager::startNewVm() {
 	string name;
 	try {
 		VM *vm = new VM(conn);
-		vm->powerOn();
-		cout << "Manager::startNewVm: Waiting for 30 secs for the VM to boot"
-			 << endl;
-		this_thread::sleep_for(chrono::seconds(30));
-
-		mutex *m = new mutex;
-		mutex *n = new mutex;
-		list<int> *lst = new list<int>();
+		auto *m = new mutex;
+		auto *n = new mutex;
+		auto *lst = new list<int>();
 		bool terminationFlag = true;
 		name = vm->getName();
 
-		domains.insert(make_pair(name, move(vm)));
+		domains.insert(make_pair(name, vm));
 		utilList.insert(make_pair(name, lst));
 		locks.insert(make_pair(name, m));
 		threadTerminationFlags.insert(make_pair(name, terminationFlag));
 		threadTerminationLocks.insert(make_pair(name, n));
-		notifyAboutServer();
 	} catch (exception &e) {
 		cout << e.what() << endl;
 	}
@@ -81,28 +81,24 @@ string Manager::startNewVm() {
 }
 
 void Manager::startNewVm(const string &nameOfVm) {
+
 	auto vec = VM::getInactiveDomainNames(conn);
-	if (find(vec.begin(), vec.end(), nameOfVm) != vec.end()) {
-		cerr << "Manager::startNewVm: no domain with name " << nameOfVm << endl;
+
+	if (find(vec.begin(), vec.end(), nameOfVm) == vec.end()) {
+		cerr << "Manager::startNewVm: no inactive domain with name " << nameOfVm <<" found"<< endl;
 	} else {
 		try {
 			VM *vm = new VM(conn, nameOfVm);
-			vm->powerOn();
-			cout
-				<< "Manager::startNewVm: Waiting for 30 secs for the VM to boot"
-				<< endl;
-			this_thread::sleep_for(chrono::seconds(30));
-			mutex *m = new mutex;
-			mutex *n = new mutex;
-			list<int> *lst = new list<int>();
+			auto *m = new mutex;
+			auto *n = new mutex;
+			auto *lst = new list<int>();
 			bool terminationFlag = true;
 
-			domains.insert(make_pair(nameOfVm, move(vm)));
+			domains.insert(make_pair(nameOfVm, vm));
 			utilList.insert(make_pair(nameOfVm, lst));
 			locks.insert(make_pair(nameOfVm, m));
 			threadTerminationFlags.insert(make_pair(nameOfVm, terminationFlag));
 			threadTerminationLocks.insert(make_pair(nameOfVm, n));
-			notifyAboutServer();
 		} catch (exception &e) {
 			cout << e.what() << endl;
 		}
@@ -114,7 +110,7 @@ void Manager::_watch(string nameOfVm) {
 		stack<function<void(string)>> exit_funcs;
 		string nameOfVm;
 
-	   public:
+	public:
 		explicit Worker(string name) : nameOfVm(std::move(name)) {}
 		Worker(Worker const &) = delete;
 		void operator=(Worker const &) = delete;
@@ -175,8 +171,6 @@ void Manager::_watch(string nameOfVm) {
 							lst->erase(lst->begin());
 						}
 					}
-					cout << vm->getName() << " size(utilVec): " << lst->size()
-						 << endl;
 				}
 			}
 			this_thread::sleep_for(chrono::milliseconds(10));
@@ -285,8 +279,6 @@ bool Manager::_deleteIpFromFile(const string &ip) {
 	return true;
 }
 
-size_t Manager::numActiveDomains() { return domains.size(); }
-
 vector<int> Manager::getUtilVector(const string &nameOfVm) {
 	vector<int> vec;
 
@@ -306,4 +298,36 @@ vector<int> Manager::getUtilVector(const string &nameOfVm) {
 
 vector<string> Manager::getAllDefinedDomainNames() {
 	return VM::getAllDefinedDomainNames(conn);
+}
+
+void Manager::powerOn(const string &nameOfVm) {
+	auto it=domains.find(nameOfVm);
+	if(it==domains.end()){
+		cerr<<"Manager::powerOn: No active vm with name "<<nameOfVm<<" found"<<endl;
+		return;
+	}
+	auto vm=it->second;
+	vm->powerOn();
+	cout<<"Manager::powerOn: Waiting for 30 secs for VM to boot"<<endl;
+	this_thread::sleep_for(chrono::seconds(30));
+	notifyAboutServer();
+}
+
+bool Manager::isVmPowered(const string &nameOfVm) {
+	auto it=domains.find(nameOfVm);
+	if(it==domains.end()){
+		return false;
+	}
+	auto vm=it->second;
+	return vm->isPoweredOn();
+}
+
+string Manager::getIP(const string &nameOfVm) {
+	auto it=domains.find(nameOfVm);
+	if(it==domains.end()){
+		cerr<<"Manager::getIP: No active vm with name "<<nameOfVm<<" found"<<endl;
+		return "";
+	}
+	auto vm=it->second;
+	return vm->getIp();
 }

@@ -1,6 +1,6 @@
 #include <gtkmm/application.h>
 
-#include "VmManager.cpp"
+#include "VMManager/VmManager.h"
 
 int main(int argc, char *argv[]) {
 	auto app = Gtk::Application::create(argc, argv, "org.iitb.cse.pranav");

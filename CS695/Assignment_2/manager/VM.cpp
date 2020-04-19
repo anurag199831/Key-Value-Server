@@ -1,4 +1,8 @@
-#include "vm.h"
+//
+// Created by pranav on 18/04/20.
+//
+
+#include "VM.h"
 
 #include <algorithm>
 #include <iostream>
@@ -12,7 +16,7 @@ VM::VM(const virConnectPtr &connPtr, const string &name) {
 	vector<string> names = getInactiveDomainNames(connPtr);
 	if (find(names.begin(), names.end(), name) == names.end()) {
 		throw invalid_argument(
-			"VM::VM(): no inactive VM found with name=" + name + "\n");
+				"VM::VM(): no inactive VM found with name=" + name + "\n");
 	}
 	domPtr = virDomainLookupByName(connPtr, name.c_str());
 	if (domPtr == NULL) {
@@ -27,15 +31,15 @@ VM::VM(const virConnectPtr &conn) {
 	virDomainPtr dom;
 	if (inactiveDomains.empty()) {
 		throw runtime_error(
-			"VM::startAnyInactiveDomain: no inactive domain configuration "
-			"found");
+				"VM::startAnyInactiveDomain: no inactive domain configuration "
+				"found");
 	} else {
 		cout << "VM::startAnyInactiveDomain: starting domain with name "
 			 << inactiveDomains.at(0) << endl;
 		dom = virDomainLookupByName(conn, inactiveDomains.at(0).c_str());
 		if (domPtr == NULL) {
 			throw runtime_error(
-				"VM::VM(): call failed to virDomainLookupByName\n");
+					"VM::VM(): call failed to virDomainLookupByName\n");
 		}
 	}
 	domPtr = dom;
@@ -98,7 +102,7 @@ string VM::_getTypedParamValue(const virTypedParameterPtr &item) {
 // Returns the statics for domain in a unordered map given the record pointer.
 // Returns an empty map if invalid records are passed.
 unordered_map<string, string> VM::_getDomainStatRecordMap(
-	const virDomainStatsRecordPtr &record) {
+		const virDomainStatsRecordPtr &record) {
 	unordered_map<string, string> map;
 	string param;
 	if (record == NULL) {
@@ -116,7 +120,7 @@ unordered_map<string, string> VM::_getDomainStatRecordMap(
 // Returns a stat map for the given domain.
 // Returns empty map otherwise.
 unordered_map<string, string> VM::_getStatsforDomain(
-	const virConnectPtr &conn) {
+		const virConnectPtr &conn) {
 	unsigned int statFlag = VIR_DOMAIN_STATS_VCPU | VIR_DOMAIN_STATS_CPU_TOTAL |
 							VIR_DOMAIN_STATS_STATE;
 
@@ -205,7 +209,7 @@ double VM::_convertStatMapToUtil(const unordered_map<string, string> &map) {
 		vcpu_current = atol(n_curr->second.c_str());
 		vcpu_maximum = atol(n_max->second.c_str());
 	} else {
-		cerr << "ManageisPoweredOnr::convertStatMapToUtil: invalid stat map "
+		cerr << "VM::convertStatMapToUtil: invalid stat map "
 				"passed"
 			 << endl;
 		return 0;
@@ -242,18 +246,18 @@ tuple<long, double> VM::getVmCpuUtil(const virConnectPtr &conn) {
 // Returns the mapping of hwaddr: nwaddrs as a map of (string,vector<string>).
 // Returns empty otherwise.
 unordered_map<string, vector<string>> VM::getInterfaceInfo() {
-	int max_retry = 30;
+	int max_retry = 0;
 	virDomainInterfacePtr *ifaces = NULL;
 	unordered_map<string, vector<string>> map;
 	int ifacesCount = virDomainInterfaceAddresses(
-		domPtr, &ifaces, VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE, 0);
+			domPtr, &ifaces, VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE, 0);
 	while ((ifacesCount == -1 or ifacesCount == 0) and max_retry != 0) {
 		cout << "VM::getInterfaceInfo: "
 			 << "Retrying for " << 30 - max_retry << " time" << endl;
 		cout << "VM::getInterfaceInfo: Waiting for VM to start" << endl;
 		this_thread::sleep_for(chrono::seconds(2));
 		ifacesCount = virDomainInterfaceAddresses(
-			domPtr, &ifaces, VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE, 0);
+				domPtr, &ifaces, VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE, 0);
 		max_retry--;
 	}
 	string hwaddr;
@@ -297,9 +301,9 @@ bool VM::isPoweredOn() {
 
 	if (state == VIR_DOMAIN_NOSTATE)
 		cout << "VM::isPoweredOn: " << getName() << " has no state" << endl;
-	else if (state == VIR_DOMAIN_RUNNING)
-		cout << "VM::isPoweredOn: " << getName() << " is running" << endl;
-	else if (state == VIR_DOMAIN_BLOCKED)
+	else if (state == VIR_DOMAIN_RUNNING) {
+//	  cout << "VM::isPoweredOn: " << getName() << " is running" << endl;
+	} else if (state == VIR_DOMAIN_BLOCKED)
 		cout << "VM::isPoweredOn: " << getName() << " is blocked on resource"
 			 << endl;
 	else if (state == VIR_DOMAIN_PAUSED)
@@ -317,10 +321,7 @@ bool VM::isPoweredOn() {
 			 << " is suspended by guest power "
 				"management"
 			 << endl;
-	if (state >= 4 and state <= 6) {
-		return false;
-	}
-	return true;
+	return !(state >= 4 and state <= 6);
 }
 
 // ##########################################################################
@@ -338,13 +339,14 @@ vector<string> VM::getInactiveDomainNames(const virConnectPtr &conn) {
 	names.reserve(numDomains);
 	char *inactiveDomainsNames[numDomains];
 	numDomains =
-		virConnectListDefinedDomains(conn, inactiveDomainsNames, numDomains);
+			virConnectListDefinedDomains(conn, inactiveDomainsNames, numDomains);
 	for (int i = 0; i < numDomains; i++) {
 		names.emplace_back(inactiveDomainsNames[i]);
 	}
 	return names;
 }
 
+// Returns a vector of strings of all the names of defines domains.
 vector<string> VM::getAllDefinedDomainNames(const virConnectPtr &conn) {
 	vector<string> vec;
 	virDomainPtr *domains;

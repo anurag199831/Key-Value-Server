@@ -1,3 +1,10 @@
+//
+// Created by pranav on 18/04/20.
+//
+
+#ifndef ASSIGNMENT_2_VM_H
+#define ASSIGNMENT_2_VM_H
+
 #include <libvirt/libvirt.h>
 
 #include <unordered_map>
@@ -6,12 +13,12 @@
 using namespace std;
 
 class VM {
-   private:
+private:
 	virDomainPtr domPtr;
 
 	// Inline private member functions
 	inline unordered_map<string, string> _getDomainStatRecordMap(
-		const virDomainStatsRecordPtr& record);
+			const virDomainStatsRecordPtr& record);
 	inline string _getTypedParamValue(const virTypedParameterPtr& item);
 
 	// private member functions
@@ -19,7 +26,7 @@ class VM {
 	long _getVmStateFromMap(const unordered_map<string, string>& map);
 	unordered_map<string, string> _getStatsforDomain(const virConnectPtr& conn);
 
-   public:
+public:
 	VM(const virConnectPtr& connPtr, const string& name);
 	explicit VM(const virConnectPtr& connPtr);
 	~VM();
@@ -37,3 +44,6 @@ class VM {
 	static vector<string> getAllDefinedDomainNames(const virConnectPtr& conn);
 	static vector<string> getInactiveDomainNames(const virConnectPtr& conn);
 };
+
+
+#endif //ASSIGNMENT_2_VM_H

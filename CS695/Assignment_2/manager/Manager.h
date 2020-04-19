@@ -1,16 +1,25 @@
+//
+// Created by pranav on 18/04/20.
+//
+
+#ifndef ASSIGNMENT_2_MANAGER_H
+#define ASSIGNMENT_2_MANAGER_H
+
 #include <libvirt/libvirt.h>
 
 #include <iostream>
 #include <list>
 #include <mutex>
+#include <vector>
 #include <unordered_map>
+#include <thread>
+#include "VM.h"
 
-#include "vm.cpp"
 
 using namespace std;
 
 class Manager {
-   private:
+private:
 	virConnectPtr conn;
 	unordered_map<string, VM*> domains;
 	unordered_map<string, mutex*> locks;
@@ -23,17 +32,20 @@ class Manager {
 	bool _writeIpToFile(const string& ip);
 	bool _deleteIpFromFile(const string& ip);
 
-   public:
+public:
 	Manager();
 	~Manager();
 	string startNewVm();
 	void powerOn(const string& nameOfVm);
 	void shutdown(const string& nameOfVm);
 	void startNewVm(const string& nameOfVm);
+	bool isVmPowered(const string &nameOfVm);
+	string getIP(const string &nameOfVm);
 	thread* startWatching(const string& nameOfVm);
 	vector<int> getUtilVector(const string& nameOfVm);
 	vector<string> getAllDefinedDomainNames();
-
 	void notifyAboutServer();
-	size_t numActiveDomains();
 };
+
+
+#endif //ASSIGNMENT_2_MANAGER_H
