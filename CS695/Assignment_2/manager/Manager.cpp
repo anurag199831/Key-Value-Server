@@ -60,11 +60,11 @@ Manager::~Manager() {
 	virConnectClose(conn);
 	conn = NULL;
 
-	for (auto &&i : threadTerminationLocks) {
-		cout << "Manager::~Manager: " << i.first << " threadTermination mutex deleted"
-			 << endl;
-		delete i.second;
-	}
+//	for (auto &&i : threadTerminationLocks) {
+//		cout << "Manager::~Manager: " << i.first << " threadTermination mutex deleted"
+//			 << endl;
+//		delete i.second;
+//	}
 }
 
 string Manager::startNewVm() {
@@ -165,7 +165,6 @@ void Manager::_watch(string nameOfVm) {
 				}
 				if (not terminationFlag) {
 					util = get<1>(t);
-					cout << vm->getName() << " util: " << util << "%" << endl;
 					{
 						lst->push_back(util);
 						if (lst->size() > 40) { lst->erase(lst->begin()); }
@@ -207,7 +206,6 @@ void Manager::shutdown(const string &nameOfVm) {
 		vm = domains.at(nameOfVm);
 		m = locks.at(nameOfVm);
 		lst = utilList.at(nameOfVm);
-		cout << "Deleting IP " << vm->getIp() << endl;
 		_deleteIpFromFile(vm->getIp());
 		vm->shutdown();
 		delete vm;
@@ -298,8 +296,8 @@ void Manager::powerOn(const string &nameOfVm) {
 	}
 	auto vm = it->second;
 	vm->powerOn();
-	cout << "Manager::powerOn: Waiting for 30 secs for VM to boot" << endl;
-	this_thread::sleep_for(chrono::seconds(30));
+//	cout << "Manager::powerOn: Waiting for 30 secs for VM to boot" << endl;
+//	this_thread::sleep_for(chrono::seconds(30));
 	notifyAboutServer();
 }
 

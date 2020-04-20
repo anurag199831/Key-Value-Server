@@ -11,6 +11,7 @@
 #include <gtkmm/label.h>
 #include <gtkmm/window.h>
 
+#include <condition_variable>
 #include <thread>
 #include <unordered_map>
 
@@ -18,7 +19,7 @@
 
 class VmManager : public Gtk::Window {
    private:
-	Manager mgr;
+	Manager *mgr;
 
 	unordered_map<string, thread *> launchThreads;
 	unordered_map<string, thread *> ipUpdaterThreads;
@@ -28,6 +29,9 @@ class VmManager : public Gtk::Window {
 	unordered_map<string, mutex *> terminationMutexes;
 
 	thread* sanitiserThread;
+	mutex sanitizerMutex;
+	condition_variable sanitizeVariable;
+	bool sanitizerThreadTerminationFlag;
 
 	void _fillViewsInGrid(Gtk::Grid *grid);
 

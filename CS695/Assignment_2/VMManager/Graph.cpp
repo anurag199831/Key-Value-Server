@@ -28,13 +28,14 @@ bool Graph::on_timeout() {
 bool Graph::on_draw(const Cairo::RefPtr<Cairo::Context>& cr) {
 	std::vector<int> vecToDraw = {};
 	if (mState == DRAW_HOLD) {
-		std::cout << "Graph::on_draw: Hold flag set" << std::endl;
+		//		std::cout << "Graph::on_draw: Hold flag set" << std::endl;
 		vecToDraw = mPrevState;
 	} else if (mState == DRAW_START) {
-		std::cout << "Graph::on_draw: Draw flag set" << std::endl;
+		//		std::cout << "Graph::on_draw: Draw flag set" << std::endl;
 		vecToDraw = mCurrState;
+		mState = DRAW_HOLD;
 	} else if (mState == DRAW_CLEAR) {
-		std::cout << "Graph::on_draw: Clear flag set" << std::endl;
+		//		std::cout << "Graph::on_draw: Clear flag set" << std::endl;
 	}
 
 	Gtk::Allocation allocation = get_allocation();
@@ -59,7 +60,6 @@ bool Graph::on_draw(const Cairo::RefPtr<Cairo::Context>& cr) {
 	cr->stroke();
 	cr->restore();
 	get_window()->thaw_updates();
-	mState = DRAW_HOLD;
 	return true;
 }
 
@@ -68,4 +68,8 @@ void Graph::setVectorToDraw(const std::vector<int>& vec) {
 	mCurrState = vec;
 	mState = DRAW_START;
 }
-void Graph::clear() { mState = DRAW_CLEAR; }
+void Graph::clear() {
+	mState = DRAW_CLEAR;
+	mPrevState={};
+	mCurrState={};
+}

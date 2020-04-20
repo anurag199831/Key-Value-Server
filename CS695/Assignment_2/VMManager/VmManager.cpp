@@ -8,9 +8,34 @@
 
 #include "Graph.h"
 
-VmManager::VmManager() {
+VmManager::VmManager() : sanitizerThreadTerminationFlag(false) {
+	mgr = new Manager();
 
-
+	sanitiserThread = new thread([this] {
+		while (true) {
+			for (auto &&i : launchThreads) {
+				if (i.second != nullptr and i.second->joinable()) {
+					i.second->join();
+					std::cout
+						<< "VmManager::sanitizerThread: launcher thread of "
+						<< i.first << " destroyed" << std::endl;
+					delete i.second;
+					launchThreads.erase(i.first);
+				}
+			}
+			{
+				std::lock_guard lck(sanitizerMutex);
+				if (sanitizerThreadTerminationFlag and launchThreads.empty()) {
+					std::cout << "VmManager::sanitizerThread: destroying "
+								 "sanitizer thread"
+							  << std::endl;
+					sanitizerThreadTerminationFlag = false;
+					break;
+				}
+			}
+			this_thread::sleep_for(chrono::seconds(1));
+		}
+	});
 
 	add(m_box1);
 
@@ -34,10 +59,60 @@ VmManager::VmManager() {
 	show_all_children();
 }
 
-VmManager::~VmManager() = default;
+VmManager::~VmManager() {
+	for (auto &&i : terminationMutexes) {
+		{
+			std::lock_guard lck(*i.second);
+
+			auto it = terminationFlags.find(i.first);
+			if (it != terminationFlags.end()) {
+				it->second = true;
+			} else {
+				std::cerr << "VmManager::~VmManager: no flag found for "
+						  << i.first << std::endl;
+			}
+		}
+	}
+
+	{
+		std::lock_guard lck(sanitizerMutex);
+		sanitizerThreadTerminationFlag = true;
+	}
+
+	delete mgr;
+
+	if (sanitiserThread != nullptr) {
+		sanitiserThread->join();
+		std::cout << "VmManager::~VmManager: sanitizerThread destroyed"
+				  << std::endl;
+	}
+
+	for (auto it = ipUpdaterThreads.cbegin();
+		 it != ipUpdaterThreads.cend() /* not hoisted */;
+		 /* no increment */) {
+		if (it->second != nullptr) it->second->join();
+		std::cout << "VmManager::~VMManager: ipThread destroyed for "
+				  << it->first << std::endl;
+		ipUpdaterThreads.erase(it++);
+	}
+
+	for (auto it = drawingThreads.cbegin();
+		 it != drawingThreads.cend() /* not hoisted */;
+		 /* no increment */) {
+		if (it->second != nullptr) it->second->join();
+		std::cout << "VmManager::~VMManager: drawThread destroyed for "
+				  << it->first << std::endl;
+		drawingThreads.erase(it++);
+	}
+
+	if (drawingThreads.empty() and ipUpdaterThreads.empty()) {
+		std::cout << "VmManager::~VMManager: All threads destroyed"
+				  << std::endl;
+	}
+}
 
 void VmManager::_fillViewsInGrid(Gtk::Grid *grid) {
-	auto namesOfVM = mgr.getAllDefinedDomainNames();
+	auto namesOfVM = mgr->getAllDefinedDomainNames();
 
 	int pos = 0;
 
@@ -94,8 +169,8 @@ void VmManager::_fillBoxWithName(Gtk::Box *box, const string &nameOfVM) {
 
 void VmManager::_fillBoxWithIP(Gtk::Box *box, const string &nameOfVM) {
 	string ip;
-	if (mgr.isVmPowered(nameOfVM)) {
-		ip = mgr.getIP(nameOfVM);
+	if (mgr->isVmPowered(nameOfVM)) {
+		ip = mgr->getIP(nameOfVM);
 	} else {
 		ip = "--";
 	}
@@ -145,7 +220,7 @@ void VmManager::_setButtonsInBox(Gtk::Box *box, const string &nameOfVM) {
 
 void VmManager::_drawGraphInBox(Gtk::Box *box, const string &nameOfVm,
 								bool clear) {
-	auto vec = mgr.getUtilVector(nameOfVm);
+	auto vec = mgr->getUtilVector(nameOfVm);
 
 	auto children = box->get_children();
 	Gtk::Widget *name = children.at(1);
@@ -164,7 +239,6 @@ void VmManager::_drawGraphInBox(Gtk::Box *box, const string &nameOfVm,
 	}
 }
 
-
 // Signal Handlers
 
 void VmManager::on_start_button_clicked(const Glib::ustring &name,
@@ -182,9 +256,9 @@ void VmManager::on_start_button_clicked(const Glib::ustring &name,
 	}
 
 	auto launcherThread = new thread([this, name]() {
-		mgr.startNewVm(name);
-		mgr.powerOn(name);
-		mgr.startWatching(name);
+		mgr->startNewVm(name);
+		mgr->powerOn(name);
+		mgr->startWatching(name);
 	});
 
 	auto ipUpdaterThread = new thread([this, box, name] {
@@ -206,7 +280,6 @@ void VmManager::on_start_button_clicked(const Glib::ustring &name,
 			{
 				std::lock_guard lck(*terminationMutexes.at(name));
 				if (terminationFlags.at(name)) {
-					_drawGraphInBox(box, name, true);
 					break;
 				} else {
 					_drawGraphInBox(box, name, false);
@@ -214,6 +287,7 @@ void VmManager::on_start_button_clicked(const Glib::ustring &name,
 			}
 			this_thread::sleep_for(chrono::seconds(1));
 		}
+		_drawGraphInBox(box, name, true);
 	});
 
 	launchThreads.insert(std::make_pair(std::string(name), launcherThread));
@@ -245,7 +319,7 @@ void VmManager::on_shut_button_clicked(const Glib::ustring &name,
 	shutButton->set_sensitive(false);
 	startButton->set_sensitive(true);
 
-	mgr.shutdown(name);
+	mgr->shutdown(name);
 
 	auto ipThread = ipUpdaterThreads.find(name);
 	if (ipThread != ipUpdaterThreads.end()) {
@@ -269,7 +343,7 @@ void VmManager::on_shut_button_clicked(const Glib::ustring &name,
 			delete drawThread->second;
 			drawingThreads.erase(name);
 			std::cout << "VmManager::on_shut_button_clicked: draw thread for "
-					  << name << "terminated" << std::endl;
+					  << name << " terminated" << std::endl;
 		}
 	} else {
 		std::cerr << "VmManager::on_shut_button_clicked: no draw thread "
