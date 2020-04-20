@@ -9,25 +9,24 @@
 
 #include <vector>
 
-
 class Graph : public Gtk::DrawingArea {
-	private:
-		std::vector<int> mCurrState;
-		std::vector<int> mPrevState;
-		enum { DRAW_HOLD, DRAW_START } mState;
+   private:
+	std::vector<int> mCurrState;
+	std::vector<int> mPrevState;
+	enum { DRAW_HOLD, DRAW_START, DRAW_CLEAR } mState;
 
-		const int TIMEOUT_INTERVAL_IN_MILLIS = 1000;
+	static const int TIMEOUT_INTERVAL_IN_MILLIS = 1000;
+	static const int MAX_TICKS_ON_GRAPH = 40;
 
-	protected:
-		bool on_draw(const Cairo::RefPtr<Cairo::Context>& cr) override;
-		bool on_timeout();
+   protected:
+	bool on_draw(const Cairo::RefPtr<Cairo::Context>& cr) override;
+	bool on_timeout();
 
-	public:
-		Graph();
-		~Graph() override;
-		void setVectorToDraw(const std::vector<int>& vec);
-
+   public:
+	Graph();
+	~Graph() override;
+	void setVectorToDraw(const std::vector<int>& vec);
+	void clear();
 };
 
-
-#endif //ASSIGNMENT_2_GRAPH_H
+#endif	// ASSIGNMENT_2_GRAPH_H

@@ -17,43 +17,43 @@
 #include "../manager/Manager.h"
 
 class VmManager : public Gtk::Window {
- private:
-  Manager mgr;
+   private:
+	Manager mgr;
 
-  unordered_map<string, thread *> launchThreads;
-  unordered_map<string, thread *> ipUpdaterThreads;
-  unordered_map<string, thread *> drawingThreads;
-  thread *sanitizer;
+	unordered_map<string, thread *> launchThreads;
+	unordered_map<string, thread *> ipUpdaterThreads;
+	unordered_map<string, thread *> drawingThreads;
 
-  unordered_map<string, bool> terminationFlags;
-  unordered_map<string, mutex *> terminationMutexes;
+	unordered_map<string, bool> terminationFlags;
+	unordered_map<string, mutex *> terminationMutexes;
 
-  mutex launchMutex;
+	thread* sanitiserThread;
 
-  void _createViews();
+	void _fillViewsInGrid(Gtk::Grid *grid);
 
-  static void __getBoxWithWidgets(Gtk::Box *box);
+	static void _getBoxWithWidgets(Gtk::Box *box);
 
-  static void __fillBoxWithName(Gtk::Box *box, const string &nameOfVM);
+	static void _fillBoxWithName(Gtk::Box *box, const string &nameOfVM);
 
-  void __fillBoxWithIP(Gtk::Box *box, const string &nameOfVM);
+	void _fillBoxWithIP(Gtk::Box *box, const string &nameOfVM);
 
-  void __setButtonsInBox(Gtk::Box *box, const string &nameOfVM);
+	void _drawGraphInBox(Gtk::Box *box, const string& nameOfVm,bool clear);
 
- public:
-  VmManager();
+	void _setButtonsInBox(Gtk::Box *box, const string &nameOfVM);
 
-  ~VmManager() override;
+   public:
+	VmManager();
+	~VmManager() override;
 
- protected:
-  Gtk::Box m_box1;
-  Gtk::Grid m_grid1;
+   protected:
+	Gtk::Box m_box1;
 
-  // Signal handlers:
-  void on_start_button_clicked(const Glib::ustring &name, Gtk::Box *box,
-							   Gtk::Button *start,Gtk::Button *shut);
-  void on_shut_button_clicked(const Glib::ustring &name, Gtk::Box *box,
-							  Gtk::Button *start,Gtk::Button *shut);
+
+	// Signal handlers:
+	void on_start_button_clicked(const Glib::ustring &name, Gtk::Box *box,
+								 Gtk::Button *start, Gtk::Button *shut);
+	void on_shut_button_clicked(const Glib::ustring &name, Gtk::Button *start,
+								Gtk::Button *shut);
 };
 
 #endif	// ASSIGNMENT_2_VMMANAGER_H

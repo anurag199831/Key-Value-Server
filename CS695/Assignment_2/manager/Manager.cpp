@@ -4,7 +4,6 @@
 
 #include "Manager.h"
 
-
 #include <fcntl.h>
 
 #include <algorithm>
@@ -28,9 +27,7 @@ Manager::Manager() {
 Manager::~Manager() {
 	try {
 		remove(ipFile.c_str());
-	} catch (exception &e) {
-		cout << "Manager::~Manager" << e.what() << endl;
-	}
+	} catch (exception &e) { cout << "Manager::~Manager" << e.what() << endl; }
 	for (auto &&i : threadTerminationLocks) {
 		unique_lock<mutex> lck(*i.second);
 		auto it = threadTerminationFlags.find(i.first);
@@ -41,22 +38,33 @@ Manager::~Manager() {
 				 << " found" << endl;
 		}
 	}
+
 	this_thread::sleep_for(chrono::seconds(2));
+
 	for (auto &&i : domains) {
 		cout << "Manager::~Manager: " << i.first << " VM deleted" << endl;
 		delete i.second;
 	}
+
 	for (auto &&i : locks) {
 		cout << "Manager::~Manager: " << i.first << " mutex deleted" << endl;
 		delete i.second;
 	}
+
 	for (auto &&i : utilList) {
 		cout << "Manager::~Manager: " << i.first << " util list deleted"
 			 << endl;
 		delete i.second;
 	}
+
 	virConnectClose(conn);
 	conn = NULL;
+
+	for (auto &&i : threadTerminationLocks) {
+		cout << "Manager::~Manager: " << i.first << " threadTermination mutex deleted"
+			 << endl;
+		delete i.second;
+	}
 }
 
 string Manager::startNewVm() {
@@ -74,18 +82,16 @@ string Manager::startNewVm() {
 		locks.insert(make_pair(name, m));
 		threadTerminationFlags.insert(make_pair(name, terminationFlag));
 		threadTerminationLocks.insert(make_pair(name, n));
-	} catch (exception &e) {
-		cout << e.what() << endl;
-	}
+	} catch (exception &e) { cout << e.what() << endl; }
 	return name;
 }
 
 void Manager::startNewVm(const string &nameOfVm) {
-
 	auto vec = VM::getInactiveDomainNames(conn);
 
 	if (find(vec.begin(), vec.end(), nameOfVm) == vec.end()) {
-		cerr << "Manager::startNewVm: no inactive domain with name " << nameOfVm <<" found"<< endl;
+		cerr << "Manager::startNewVm: no inactive domain with name " << nameOfVm
+			 << " found" << endl;
 	} else {
 		try {
 			VM *vm = new VM(conn, nameOfVm);
@@ -99,9 +105,7 @@ void Manager::startNewVm(const string &nameOfVm) {
 			locks.insert(make_pair(nameOfVm, m));
 			threadTerminationFlags.insert(make_pair(nameOfVm, terminationFlag));
 			threadTerminationLocks.insert(make_pair(nameOfVm, n));
-		} catch (exception &e) {
-			cout << e.what() << endl;
-		}
+		} catch (exception &e) { cout << e.what() << endl; }
 	}
 }
 
@@ -110,7 +114,7 @@ void Manager::_watch(string nameOfVm) {
 		stack<function<void(string)>> exit_funcs;
 		string nameOfVm;
 
-	public:
+	   public:
 		explicit Worker(string name) : nameOfVm(std::move(name)) {}
 		Worker(Worker const &) = delete;
 		void operator=(Worker const &) = delete;
@@ -132,44 +136,39 @@ void Manager::_watch(string nameOfVm) {
 	// });
 
 	threadWorker.add([this](const string &nameOfVm) {
-		bool terminationflag = true;
-		long status = 0;
+		bool terminationFlag;
+		long status;
 		double util = 0;
 
 		{
 			auto lck = threadTerminationLocks.at(nameOfVm);
 			unique_lock<mutex> l(*lck);
-			terminationflag = threadTerminationFlags.at(nameOfVm);
+			terminationFlag = threadTerminationFlags.at(nameOfVm);
 		}
 
 		auto vm = domains.at(nameOfVm);
 		auto m = locks.at(nameOfVm);
 		auto lst = utilList.at(nameOfVm);
 
-		while (not terminationflag) {
+		while (not terminationFlag) {
 			{
 				auto lck = threadTerminationLocks.at(nameOfVm);
 				unique_lock<mutex> l(*lck);
-				terminationflag = threadTerminationFlags.at(nameOfVm);
-				if (terminationflag) {
-					break;
-				}
+				terminationFlag = threadTerminationFlags.at(nameOfVm);
+				if (terminationFlag) { break; }
 				auto t = vm->getVmCpuUtil(conn);
 				status = get<0>(t);
 				if (status >= 4 and status <= 6) {
 					cout << "Manager::_watch: " << vm->getName()
 						 << " is powered off" << endl;
-					terminationflag = true;
+					terminationFlag = true;
 				}
-				if (not terminationflag) {
+				if (not terminationFlag) {
 					util = get<1>(t);
 					cout << vm->getName() << " util: " << util << "%" << endl;
 					{
-						unique_lock<mutex> l(*m);
 						lst->push_back(util);
-						if (lst->size() > 40) {
-							lst->erase(lst->begin());
-						}
+						if (lst->size() > 40) { lst->erase(lst->begin()); }
 					}
 				}
 			}
@@ -185,7 +184,7 @@ thread *Manager::startWatching(const string &nameOfVm) {
 	} else {
 		it->second = false;
 	}
-	auto *th = new thread([this, nameOfVm]() { _watch(nameOfVm); });
+	auto th = new thread([this, nameOfVm]() { _watch(nameOfVm); });
 	return th;
 }
 
@@ -218,9 +217,7 @@ void Manager::shutdown(const string &nameOfVm) {
 		utilList.erase(nameOfVm);
 		locks.erase(nameOfVm);
 
-	} catch (exception &e) {
-		cout << e.what() << endl;
-	}
+	} catch (exception &e) { cout << e.what() << endl; }
 }
 
 void Manager::notifyAboutServer() {
@@ -256,13 +253,9 @@ bool Manager::_deleteIpFromFile(const string &ip) {
 	ifstream inputFile;
 	ofstream outFile;
 	inputFile.open(ipFile, ifstream::in);
-	if (!inputFile.is_open()) {
-		return false;
-	}
+	if (!inputFile.is_open()) { return false; }
 	outFile.open(ipFile + "_temp", ofstream::out);
-	if (!outFile.is_open()) {
-		return false;
-	}
+	if (!outFile.is_open()) { return false; }
 	string line;
 	while (inputFile >> line) {
 		if (line == ip) {
@@ -283,16 +276,12 @@ vector<int> Manager::getUtilVector(const string &nameOfVm) {
 	vector<int> vec;
 
 	auto m = locks.find(nameOfVm);
-	if (m == locks.end()) {
-		return vec;
-	}
+	if (m == locks.end()) { return vec; }
 
 	unique_lock<mutex> l(*m->second);
 
 	auto lst = utilList.at(nameOfVm);
-	for (auto &&i : *lst) {
-		vec.push_back(i);
-	}
+	for (auto &&i : *lst) { vec.push_back(i); }
 	return vec;
 }
 
@@ -301,33 +290,33 @@ vector<string> Manager::getAllDefinedDomainNames() {
 }
 
 void Manager::powerOn(const string &nameOfVm) {
-	auto it=domains.find(nameOfVm);
-	if(it==domains.end()){
-		cerr<<"Manager::powerOn: No active vm with name "<<nameOfVm<<" found"<<endl;
+	auto it = domains.find(nameOfVm);
+	if (it == domains.end()) {
+		cerr << "Manager::powerOn: No active vm with name " << nameOfVm
+			 << " found" << endl;
 		return;
 	}
-	auto vm=it->second;
+	auto vm = it->second;
 	vm->powerOn();
-	cout<<"Manager::powerOn: Waiting for 30 secs for VM to boot"<<endl;
+	cout << "Manager::powerOn: Waiting for 30 secs for VM to boot" << endl;
 	this_thread::sleep_for(chrono::seconds(30));
 	notifyAboutServer();
 }
 
 bool Manager::isVmPowered(const string &nameOfVm) {
-	auto it=domains.find(nameOfVm);
-	if(it==domains.end()){
-		return false;
-	}
-	auto vm=it->second;
+	auto it = domains.find(nameOfVm);
+	if (it == domains.end()) { return false; }
+	auto vm = it->second;
 	return vm->isPoweredOn();
 }
 
 string Manager::getIP(const string &nameOfVm) {
-	auto it=domains.find(nameOfVm);
-	if(it==domains.end()){
-		cerr<<"Manager::getIP: No active vm with name "<<nameOfVm<<" found"<<endl;
+	auto it = domains.find(nameOfVm);
+	if (it == domains.end()) {
+		cerr << "Manager::getIP: No active vm with name " << nameOfVm
+			 << " found" << endl;
 		return "";
 	}
-	auto vm=it->second;
+	auto vm = it->second;
 	return vm->getIp();
 }

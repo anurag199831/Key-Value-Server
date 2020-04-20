@@ -10,16 +10,16 @@
 #include <iostream>
 #include <list>
 #include <mutex>
-#include <vector>
-#include <unordered_map>
 #include <thread>
-#include "VM.h"
+#include <unordered_map>
+#include <vector>
 
+#include "VM.h"
 
 using namespace std;
 
 class Manager {
-private:
+   private:
 	virConnectPtr conn;
 	unordered_map<string, VM*> domains;
 	unordered_map<string, mutex*> locks;
@@ -32,20 +32,19 @@ private:
 	bool _writeIpToFile(const string& ip);
 	bool _deleteIpFromFile(const string& ip);
 
-public:
+   public:
 	Manager();
 	~Manager();
 	string startNewVm();
 	void powerOn(const string& nameOfVm);
 	void shutdown(const string& nameOfVm);
 	void startNewVm(const string& nameOfVm);
-	bool isVmPowered(const string &nameOfVm);
-	string getIP(const string &nameOfVm);
+	bool isVmPowered(const string& nameOfVm);
+	string getIP(const string& nameOfVm);
 	thread* startWatching(const string& nameOfVm);
 	vector<int> getUtilVector(const string& nameOfVm);
 	vector<string> getAllDefinedDomainNames();
 	void notifyAboutServer();
 };
 
-
-#endif //ASSIGNMENT_2_MANAGER_H
+#endif	// ASSIGNMENT_2_MANAGER_H
