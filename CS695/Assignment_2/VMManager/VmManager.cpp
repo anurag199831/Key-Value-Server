@@ -85,6 +85,7 @@ VmManager::~VmManager() {
 		sanitiserThread->join();
 		std::cout << "VmManager::~VmManager: sanitizerThread destroyed"
 				  << std::endl;
+		delete sanitiserThread;
 	}
 
 	for (auto it = ipUpdaterThreads.cbegin();
@@ -105,8 +106,18 @@ VmManager::~VmManager() {
 		drawingThreads.erase(it++);
 	}
 
-	if (drawingThreads.empty() and ipUpdaterThreads.empty()) {
-		std::cout << "VmManager::~VMManager: All threads destroyed"
+	for (auto it = terminationMutexes.cbegin();
+		 it != terminationMutexes.cend() /* not hoisted */;
+		 /* no increment */) {
+		delete it->second;
+		std::cout << "VmManager::~VMManager: terminationMutex destroyed for "
+				  << it->first << std::endl;
+		terminationMutexes.erase(it++);
+	}
+
+	if (drawingThreads.empty() and ipUpdaterThreads.empty() and
+		terminationMutexes.empty()) {
+		std::cout << "VmManager::~VMManager: All threads and objects destroyed"
 				  << std::endl;
 	}
 }
@@ -298,6 +309,9 @@ void VmManager::on_start_button_clicked(const Glib::ustring &name,
 void VmManager::on_shut_button_clicked(const Glib::ustring &name,
 									   Gtk::Button *startButton,
 									   Gtk::Button *shutButton) {
+	startButton->set_sensitive(true);
+	shutButton->set_sensitive(false);
+
 	auto itm = terminationMutexes.find(name);
 	if (itm == terminationMutexes.end()) {
 		std::cerr << "VmManager::on_shut_button_clicked: no mutex found for "
@@ -315,9 +329,6 @@ void VmManager::on_shut_button_clicked(const Glib::ustring &name,
 				  << name << std::endl;
 		return;
 	}
-
-	shutButton->set_sensitive(false);
-	startButton->set_sensitive(true);
 
 	mgr->shutdown(name);
 

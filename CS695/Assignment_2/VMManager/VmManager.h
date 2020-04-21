@@ -30,7 +30,6 @@ class VmManager : public Gtk::Window {
 
 	thread* sanitiserThread;
 	mutex sanitizerMutex;
-	condition_variable sanitizeVariable;
 	bool sanitizerThreadTerminationFlag;
 
 	void _fillViewsInGrid(Gtk::Grid *grid);

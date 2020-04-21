@@ -26,7 +26,9 @@ class Manager {
 	unordered_map<string, list<int>*> utilList;
 	unordered_map<string, bool> threadTerminationFlags;
 	unordered_map<string, mutex*> threadTerminationLocks;
+	vector<thread *> threads;
 	const string ipFile = "server.dat";
+
 
 	void _watch(string nameOfVm);
 	bool _writeIpToFile(const string& ip);
@@ -41,7 +43,7 @@ class Manager {
 	void startNewVm(const string& nameOfVm);
 	bool isVmPowered(const string& nameOfVm);
 	string getIP(const string& nameOfVm);
-	thread* startWatching(const string& nameOfVm);
+	void startWatching(const string& nameOfVm);
 	vector<int> getUtilVector(const string& nameOfVm);
 	vector<string> getAllDefinedDomainNames();
 	void notifyAboutServer();
