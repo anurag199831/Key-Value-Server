@@ -13,15 +13,19 @@ VmManager::VmManager() : sanitizerThreadTerminationFlag(false) {
 
 	sanitiserThread = new thread([this] {
 		while (true) {
-			for (auto it = launchThreads.cbegin();
-				 it != launchThreads.cend() /* not hoisted */;
-				/* no increment */) {
-				if (*it != nullptr and (*it)->joinable()) {
-					(*it)->join();
-					std::cout << "VmManager::~sanitizerThread: launchThread destroyed"
-							  << std::endl;
+			{
+				std::lock_guard lck(sanitizerMutex);
+				for (auto it = launchThreads.cbegin();
+					 it != launchThreads.cend() /* not hoisted */;
+					 /* no increment */) {
+					if (*it != nullptr and (*it)->joinable()) {
+						(*it)->join();
+						std::cout << "VmManager::~sanitizerThread: "
+									 "launchThread destroyed"
+								  << std::endl;
+					}
+					launchThreads.erase(it++);
 				}
-				launchThreads.erase(it++);
 			}
 
 			{
@@ -302,7 +306,10 @@ void VmManager::on_start_button_clicked(const Glib::ustring &name,
 		_drawGraphInBox(box, name, true);
 	});
 
-	launchThreads.push_back(launcherThread);
+	{
+		std::lock_guard lck(sanitizerMutex);
+		launchThreads.push_back(launcherThread);
+	}
 	ipUpdaterThreads.insert(std::make_pair(name, ipUpdaterThread));
 	drawingThreads.insert(std::make_pair(name, drawingThread));
 }
@@ -313,7 +320,7 @@ void VmManager::on_shut_button_clicked(const Glib::ustring &name,
 	startButton->set_sensitive(true);
 	shutButton->set_sensitive(false);
 
-	auto shutdownThread = new thread([&]{
+	auto shutdownThread = new thread([&] {
 		auto itm = terminationMutexes.find(name);
 		if (itm == terminationMutexes.end()) {
 			std::cerr
@@ -368,5 +375,8 @@ void VmManager::on_shut_button_clicked(const Glib::ustring &name,
 					  << name << std::endl;
 		}
 	});
-	launchThreads.push_back(shutdownThread);
+	{
+		std::lock_guard lck(sanitizerMutex);
+		launchThreads.push_back(shutdownThread);
+	}
 }
