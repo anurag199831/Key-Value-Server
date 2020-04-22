@@ -21,7 +21,7 @@ class VmManager : public Gtk::Window {
    private:
 	Manager *mgr;
 
-	unordered_map<string, thread *> launchThreads;
+	list<thread *> launchThreads;
 	unordered_map<string, thread *> ipUpdaterThreads;
 	unordered_map<string, thread *> drawingThreads;
 

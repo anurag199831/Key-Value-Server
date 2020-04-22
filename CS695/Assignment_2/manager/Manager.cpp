@@ -188,7 +188,7 @@ void Manager::_watch(string nameOfVm) {
 	});
 }
 
-// Start watching the utilization of the VM with the passes name and store it in
+// Start watching the utilization of the VM with the passed name and store it in
 // utilVector.
 void Manager::startWatching(const string &nameOfVm) {
 	auto it = threadTerminationFlags.find(nameOfVm);

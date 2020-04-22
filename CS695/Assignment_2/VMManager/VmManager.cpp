@@ -13,16 +13,17 @@ VmManager::VmManager() : sanitizerThreadTerminationFlag(false) {
 
 	sanitiserThread = new thread([this] {
 		while (true) {
-			for (auto &&i : launchThreads) {
-				if (i.second != nullptr and i.second->joinable()) {
-					i.second->join();
-					std::cout
-						<< "VmManager::sanitizerThread: launcher thread of "
-						<< i.first << " destroyed" << std::endl;
-					delete i.second;
-					launchThreads.erase(i.first);
+			for (auto it = launchThreads.cbegin();
+				 it != launchThreads.cend() /* not hoisted */;
+				/* no increment */) {
+				if (*it != nullptr and (*it)->joinable()) {
+					(*it)->join();
+					std::cout << "VmManager::~sanitizerThread: launchThread destroyed"
+							  << std::endl;
 				}
+				launchThreads.erase(it++);
 			}
+
 			{
 				std::lock_guard lck(sanitizerMutex);
 				if (sanitizerThreadTerminationFlag and launchThreads.empty()) {
@@ -301,7 +302,7 @@ void VmManager::on_start_button_clicked(const Glib::ustring &name,
 		_drawGraphInBox(box, name, true);
 	});
 
-	launchThreads.insert(std::make_pair(std::string(name), launcherThread));
+	launchThreads.push_back(launcherThread);
 	ipUpdaterThreads.insert(std::make_pair(name, ipUpdaterThread));
 	drawingThreads.insert(std::make_pair(name, drawingThread));
 }
@@ -312,53 +313,60 @@ void VmManager::on_shut_button_clicked(const Glib::ustring &name,
 	startButton->set_sensitive(true);
 	shutButton->set_sensitive(false);
 
-	auto itm = terminationMutexes.find(name);
-	if (itm == terminationMutexes.end()) {
-		std::cerr << "VmManager::on_shut_button_clicked: no mutex found for "
-				  << name << std::endl;
-		return;
-	}
-
-	std::lock_guard lck(*itm->second);
-
-	auto it = terminationFlags.find(name);
-	if (it != terminationFlags.end()) {
-		it->second = true;
-	} else {
-		std::cerr << "VmManager::on_shut_button_clicked: no flag found for "
-				  << name << std::endl;
-		return;
-	}
-
-	mgr->shutdown(name);
-
-	auto ipThread = ipUpdaterThreads.find(name);
-	if (ipThread != ipUpdaterThreads.end()) {
-		if (ipThread->second != nullptr and ipThread->second->joinable()) {
-			ipThread->second->join();
-			delete ipThread->second;
-			ipUpdaterThreads.erase(name);
-			std::cout << "VmManager::on_shut_button_clicked: ip thread for "
-					  << name << " terminated" << std::endl;
+	auto shutdownThread = new thread([&]{
+		auto itm = terminationMutexes.find(name);
+		if (itm == terminationMutexes.end()) {
+			std::cerr
+				<< "VmManager::on_shut_button_clicked: no mutex found for "
+				<< name << std::endl;
+			return;
 		}
-	} else {
-		std::cerr << "VmManager::on_shut_button_clicked: no ipUpdater thread "
-					 "found for "
-				  << name << std::endl;
-	}
 
-	auto drawThread = drawingThreads.find(name);
-	if (drawThread != drawingThreads.end()) {
-		if (drawThread->second != nullptr and drawThread->second->joinable()) {
-			drawThread->second->join();
-			delete drawThread->second;
-			drawingThreads.erase(name);
-			std::cout << "VmManager::on_shut_button_clicked: draw thread for "
-					  << name << " terminated" << std::endl;
+		std::lock_guard lck(*itm->second);
+
+		auto it = terminationFlags.find(name);
+		if (it != terminationFlags.end()) {
+			it->second = true;
+		} else {
+			std::cerr << "VmManager::on_shut_button_clicked: no flag found for "
+					  << name << std::endl;
+			return;
 		}
-	} else {
-		std::cerr << "VmManager::on_shut_button_clicked: no draw thread "
-					 "found for "
-				  << name << std::endl;
-	}
+
+		mgr->shutdown(name);
+
+		auto ipThread = ipUpdaterThreads.find(name);
+		if (ipThread != ipUpdaterThreads.end()) {
+			if (ipThread->second != nullptr and ipThread->second->joinable()) {
+				ipThread->second->join();
+				delete ipThread->second;
+				ipUpdaterThreads.erase(name);
+				std::cout << "VmManager::on_shut_button_clicked: ip thread for "
+						  << name << " terminated" << std::endl;
+			}
+		} else {
+			std::cerr
+				<< "VmManager::on_shut_button_clicked: no ipUpdater thread "
+				   "found for "
+				<< name << std::endl;
+		}
+
+		auto drawThread = drawingThreads.find(name);
+		if (drawThread != drawingThreads.end()) {
+			if (drawThread->second != nullptr and
+				drawThread->second->joinable()) {
+				drawThread->second->join();
+				delete drawThread->second;
+				drawingThreads.erase(name);
+				std::cout
+					<< "VmManager::on_shut_button_clicked: draw thread for "
+					<< name << " terminated" << std::endl;
+			}
+		} else {
+			std::cerr << "VmManager::on_shut_button_clicked: no draw thread "
+						 "found for "
+					  << name << std::endl;
+		}
+	});
+	launchThreads.push_back(shutdownThread);
 }
