@@ -95,29 +95,26 @@ string Manager::startNewVm() {
 	return name;
 }
 
-
-
 void Manager::startNewVm(const string &nameOfVm) {
-	auto vec = VM::getInactiveDomainNames(conn);
-
+	auto vec = VM::getAllDefinedDomainNames(conn);
 	if (find(vec.begin(), vec.end(), nameOfVm) == vec.end()) {
 		cerr << "Manager::startNewVm: no inactive domain with name " << nameOfVm
 			 << " found" << endl;
-	} else {
-		try {
-			VM *vm = new VM(conn, nameOfVm);
-			auto *m = new mutex;
-			auto *n = new mutex;
-			auto *lst = new list<int>();
-			bool terminationFlag = true;
-
-			domains.insert(make_pair(nameOfVm, vm));
-			utilList.insert(make_pair(nameOfVm, lst));
-			locks.insert(make_pair(nameOfVm, m));
-			threadTerminationFlags.insert(make_pair(nameOfVm, terminationFlag));
-			threadTerminationLocks.insert(make_pair(nameOfVm, n));
-		} catch (exception &e) { cout << e.what() << endl; }
 	}
+
+	try {
+		VM *vm = new VM(conn, nameOfVm);
+		auto *m = new mutex;
+		auto *n = new mutex;
+		auto *lst = new list<int>();
+		bool terminationFlag = true;
+
+		domains.insert(make_pair(nameOfVm, vm));
+		utilList.insert(make_pair(nameOfVm, lst));
+		locks.insert(make_pair(nameOfVm, m));
+		threadTerminationFlags.insert(make_pair(nameOfVm, terminationFlag));
+		threadTerminationLocks.insert(make_pair(nameOfVm, n));
+	} catch (exception &e) { cout << e.what() << endl; }
 }
 
 void Manager::_watch(string nameOfVm) {
@@ -316,7 +313,7 @@ void Manager::powerOn(const string &nameOfVm) {
 		return;
 	}
 	auto vm = it->second;
-	vm->powerOn();
+	if(not vm->isPoweredOn()) { vm->powerOn(); }
 	//	cout << "Manager::powerOn: Waiting for 30 secs for VM to boot" << endl;
 	//	this_thread::sleep_for(chrono::seconds(30));
 	notifyAboutServer();

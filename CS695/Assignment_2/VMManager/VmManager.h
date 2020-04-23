@@ -28,7 +28,7 @@ class VmManager : public Gtk::Window {
 	unordered_map<string, bool> terminationFlags;
 	unordered_map<string, mutex *> terminationMutexes;
 
-	thread* sanitiserThread;
+	thread *sanitiserThread;
 	mutex sanitizerMutex;
 	bool sanitizerThreadTerminationFlag;
 
@@ -40,9 +40,13 @@ class VmManager : public Gtk::Window {
 
 	void _fillBoxWithIP(Gtk::Box *box, const string &nameOfVM);
 
-	void _drawGraphInBox(Gtk::Box *box, const string& nameOfVm,bool clear);
+	void _drawGraphInBox(Gtk::Box *box, const string &nameOfVm, bool clear);
 
 	void _setButtonsInBox(Gtk::Box *box, const string &nameOfVM);
+
+	void _powerOnImpl(const string &name, Gtk::Box *box);
+
+	void _shutdownImpl(const string &name);
 
    public:
 	VmManager();
@@ -51,12 +55,17 @@ class VmManager : public Gtk::Window {
    protected:
 	Gtk::Box m_box1;
 
-
 	// Signal handlers:
-	void on_start_button_clicked(const Glib::ustring &name, Gtk::Box *box,
+	void on_start_button_clicked(const std::string &name, Gtk::Box *box,
 								 Gtk::Button *start, Gtk::Button *shut);
-	void on_shut_button_clicked(const Glib::ustring &name, Gtk::Button *start,
+	void on_shut_button_clicked(const std::string &name, Gtk::Button *start,
 								Gtk::Button *shut);
+
+
+	void _spawnIPThread(const std::string &name, Gtk::Box *box);
+	void _spawnDrawingThread(const std::string &name, Gtk::Box *box);
+	void _issueTerminationToVmThreads(const std::string &name);
+	void _reclaimMemory(const string &name);
 };
 
 #endif	// ASSIGNMENT_2_VMMANAGER_H

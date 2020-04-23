@@ -84,8 +84,6 @@ VmManager::~VmManager() {
 		sanitizerThreadTerminationFlag = true;
 	}
 
-	delete mgr;
-
 	if (sanitiserThread != nullptr) {
 		sanitiserThread->join();
 		std::cout << "VmManager::~VmManager: sanitizerThread destroyed"
@@ -125,6 +123,8 @@ VmManager::~VmManager() {
 		std::cout << "VmManager::~VMManager: All threads and objects destroyed"
 				  << std::endl;
 	}
+
+	delete mgr;
 }
 
 void VmManager::_fillViewsInGrid(Gtk::Grid *grid) {
@@ -220,11 +220,11 @@ void VmManager::_setButtonsInBox(Gtk::Box *box, const string &nameOfVM) {
 		shut->set_sensitive(false);
 
 		start->signal_clicked().connect(
-			sigc::bind<Glib::ustring, Gtk::Box *, Gtk::Button *, Gtk::Button *>(
+			sigc::bind<std::string, Gtk::Box *, Gtk::Button *, Gtk::Button *>(
 				sigc::mem_fun(*this, &VmManager::on_start_button_clicked),
 				nameOfVM, box, start, shut));
 		shut->signal_clicked().connect(
-			sigc::bind<Glib::ustring, Gtk::Button *, Gtk::Button *>(
+			sigc::bind<std::string, Gtk::Button *, Gtk::Button *>(
 				sigc::mem_fun(*this, &VmManager::on_shut_button_clicked),
 				nameOfVM, start, shut));
 	} else {
@@ -257,12 +257,23 @@ void VmManager::_drawGraphInBox(Gtk::Box *box, const string &nameOfVm,
 
 // Signal Handlers
 
-void VmManager::on_start_button_clicked(const Glib::ustring &name,
-										Gtk::Box *box, Gtk::Button *startButton,
+void VmManager::on_start_button_clicked(const std::string &name, Gtk::Box *box,
+										Gtk::Button *startButton,
 										Gtk::Button *shutButton) {
 	startButton->set_sensitive(false);
 	shutButton->set_sensitive(true);
+	_powerOnImpl(name, box);
+}
 
+void VmManager::on_shut_button_clicked(const std::string &name,
+									   Gtk::Button *startButton,
+									   Gtk::Button *shutButton) {
+	startButton->set_sensitive(true);
+	shutButton->set_sensitive(false);
+	if(mgr->isVmPowered(name)) { _shutdownImpl(name); }
+}
+
+void VmManager::_powerOnImpl(const std::string &name, Gtk::Box *box) {
 	auto it = terminationFlags.find(name);
 	if (it != terminationFlags.end()) {
 		it->second = false;
@@ -273,29 +284,40 @@ void VmManager::on_start_button_clicked(const Glib::ustring &name,
 
 	auto launcherThread = new thread([this, name]() {
 		mgr->startNewVm(name);
-		mgr->powerOn(name);
+		if (not mgr->isVmPowered(name)) { mgr->powerOn(name); }
 		mgr->startWatching(name);
 	});
 
-	auto ipUpdaterThread = new thread([this, box, name] {
-		while (not terminationFlags.at(name)) {
-			{
-				std::lock_guard lck(*terminationMutexes.at(name));
-				if (terminationFlags.at(name)) {
-					break;
-				} else {
-					_fillBoxWithIP(box, name);
-				}
-			}
-			this_thread::sleep_for(chrono::seconds(1));
-		}
-	});
+	_spawnIPThread(name, box);
+	_spawnDrawingThread(name, box);
 
+	{
+		std::lock_guard lck(sanitizerMutex);
+		launchThreads.push_back(launcherThread);
+	}
+}
+
+void VmManager::_shutdownImpl(const string &name) {
+	_issueTerminationToVmThreads(name);
+
+	auto shutdownThread = new thread([&] {
+		mgr->shutdown(name);
+		_reclaimMemory(name);
+	});
+	{
+		std::lock_guard lck(sanitizerMutex);
+		launchThreads.push_back(shutdownThread);
+	}
+}
+
+void VmManager::_spawnDrawingThread(const std::string &name, Gtk::Box *box) {
 	auto drawingThread = new thread([this, box, name] {
 		while (not terminationFlags.at(name)) {
 			{
 				std::lock_guard lck(*terminationMutexes.at(name));
 				if (terminationFlags.at(name)) {
+					std::cout << "VmManager::drawingThread: exiting thread"
+							  << std::endl;
 					break;
 				} else {
 					_drawGraphInBox(box, name, false);
@@ -305,26 +327,34 @@ void VmManager::on_start_button_clicked(const Glib::ustring &name,
 		}
 		_drawGraphInBox(box, name, true);
 	});
-
-	{
-		std::lock_guard lck(sanitizerMutex);
-		launchThreads.push_back(launcherThread);
-	}
-	ipUpdaterThreads.insert(std::make_pair(name, ipUpdaterThread));
 	drawingThreads.insert(std::make_pair(name, drawingThread));
 }
 
-void VmManager::on_shut_button_clicked(const Glib::ustring &name,
-									   Gtk::Button *startButton,
-									   Gtk::Button *shutButton) {
-	startButton->set_sensitive(true);
-	shutButton->set_sensitive(false);
+void VmManager::_spawnIPThread(const string &name, Gtk::Box *box) {
+	auto ipUpdaterThread = new thread([this, box, name] {
+		while (not terminationFlags.at(name)) {
+			{
+				std::lock_guard lck(*terminationMutexes.at(name));
+				if (terminationFlags.at(name)) {
+					std::cout << "VmManager::ipUpdaterThread: exiting thread"
+							  << std::endl;
+					break;
+				} else {
+					_fillBoxWithIP(box, name);
+				}
+			}
+			this_thread::sleep_for(chrono::seconds(1));
+		}
+	});
+	ipUpdaterThreads.insert(std::make_pair(name, ipUpdaterThread));
+}
 
-	auto shutdownThread = new thread([&] {
+void VmManager::_issueTerminationToVmThreads(const std::string &name) {
+	auto terminationThread = new thread([&] {
 		auto itm = terminationMutexes.find(name);
 		if (itm == terminationMutexes.end()) {
 			std::cerr
-				<< "VmManager::on_shut_button_clicked: no mutex found for "
+				<< "VmManager::terminationIssueThread: no mutex found for "
 				<< name << std::endl;
 			return;
 		}
@@ -335,48 +365,47 @@ void VmManager::on_shut_button_clicked(const Glib::ustring &name,
 		if (it != terminationFlags.end()) {
 			it->second = true;
 		} else {
-			std::cerr << "VmManager::on_shut_button_clicked: no flag found for "
+			std::cerr << "VmManager::terminationIssueThread: no flag found for "
 					  << name << std::endl;
 			return;
-		}
-
-		mgr->shutdown(name);
-
-		auto ipThread = ipUpdaterThreads.find(name);
-		if (ipThread != ipUpdaterThreads.end()) {
-			if (ipThread->second != nullptr and ipThread->second->joinable()) {
-				ipThread->second->join();
-				delete ipThread->second;
-				ipUpdaterThreads.erase(name);
-				std::cout << "VmManager::on_shut_button_clicked: ip thread for "
-						  << name << " terminated" << std::endl;
-			}
-		} else {
-			std::cerr
-				<< "VmManager::on_shut_button_clicked: no ipUpdater thread "
-				   "found for "
-				<< name << std::endl;
-		}
-
-		auto drawThread = drawingThreads.find(name);
-		if (drawThread != drawingThreads.end()) {
-			if (drawThread->second != nullptr and
-				drawThread->second->joinable()) {
-				drawThread->second->join();
-				delete drawThread->second;
-				drawingThreads.erase(name);
-				std::cout
-					<< "VmManager::on_shut_button_clicked: draw thread for "
-					<< name << " terminated" << std::endl;
-			}
-		} else {
-			std::cerr << "VmManager::on_shut_button_clicked: no draw thread "
-						 "found for "
-					  << name << std::endl;
 		}
 	});
 	{
 		std::lock_guard lck(sanitizerMutex);
-		launchThreads.push_back(shutdownThread);
+		launchThreads.push_back(terminationThread);
+	}
+}
+
+void VmManager::_reclaimMemory(const std::string& name){
+	auto ipThread = ipUpdaterThreads.find(name);
+	if (ipThread != ipUpdaterThreads.end()) {
+		if (ipThread->second != nullptr and ipThread->second->joinable()) {
+			ipThread->second->join();
+			delete ipThread->second;
+			ipUpdaterThreads.erase(name);
+			std::cout << "VmManager::memoryReclamationThread: ip thread for "
+					  << name << " terminated" << std::endl;
+		}
+	} else {
+		std::cerr
+			<< "VmManager::memoryReclamationThread: no ipUpdater thread "
+			   "found for "
+			<< name << std::endl;
+	}
+
+	auto drawThread = drawingThreads.find(name);
+	if (drawThread != drawingThreads.end()) {
+		if (drawThread->second != nullptr and drawThread->second->joinable()) {
+			drawThread->second->join();
+			delete drawThread->second;
+			drawingThreads.erase(name);
+			std::cout
+				<< "VmManager::memoryReclamationThread: draw thread for "
+				<< name << " terminated" << std::endl;
+		}
+	} else {
+		std::cerr << "VmManager::memoryReclamationThread: no draw thread "
+					 "found for "
+				  << name << std::endl;
 	}
 }
