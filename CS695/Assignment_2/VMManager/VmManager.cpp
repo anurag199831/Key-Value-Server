@@ -270,17 +270,11 @@ void VmManager::on_shut_button_clicked(const std::string &name,
 									   Gtk::Button *shutButton) {
 	startButton->set_sensitive(true);
 	shutButton->set_sensitive(false);
-	if(mgr->isVmPowered(name)) { _shutdownImpl(name); }
+	if (mgr->isVmPowered(name)) { _shutdownImpl(name); }
 }
 
 void VmManager::_powerOnImpl(const std::string &name, Gtk::Box *box) {
-	auto it = terminationFlags.find(name);
-	if (it != terminationFlags.end()) {
-		it->second = false;
-	} else {
-		std::cerr << "VmManager::on_start_button_clicked: no flag found for "
-				  << name << std::endl;
-	}
+	_resetTerminationFlagForVmThreads(name);
 
 	auto launcherThread = new thread([this, name]() {
 		mgr->startNewVm(name);
@@ -349,48 +343,60 @@ void VmManager::_spawnIPThread(const string &name, Gtk::Box *box) {
 	ipUpdaterThreads.insert(std::make_pair(name, ipUpdaterThread));
 }
 
-void VmManager::_issueTerminationToVmThreads(const std::string &name) {
-	auto terminationThread = new thread([&] {
-		auto itm = terminationMutexes.find(name);
-		if (itm == terminationMutexes.end()) {
-			std::cerr
-				<< "VmManager::terminationIssueThread: no mutex found for "
-				<< name << std::endl;
-			return;
-		}
+void VmManager::_resetTerminationFlagForVmThreads(const std::string &name) {
+	auto itm = terminationMutexes.find(name);
+	if (itm == terminationMutexes.end()) {
+		std::cerr << "VmManager::_resetTerminationFlagForVmThreads: no mutex "
+					 "found for "
+				  << name << std::endl;
+		return;
+	}
 
-		std::lock_guard lck(*itm->second);
+	std::lock_guard lck(*itm->second);
 
-		auto it = terminationFlags.find(name);
-		if (it != terminationFlags.end()) {
-			it->second = true;
-		} else {
-			std::cerr << "VmManager::terminationIssueThread: no flag found for "
-					  << name << std::endl;
-			return;
-		}
-	});
-	{
-		std::lock_guard lck(sanitizerMutex);
-		launchThreads.push_back(terminationThread);
+	auto it = terminationFlags.find(name);
+	if (it != terminationFlags.end()) {
+		it->second = false;
+	} else {
+		std::cerr << "VmManager::_resetTerminationFlagForVmThreads: no flag "
+					 "found for "
+				  << name << std::endl;
 	}
 }
 
-void VmManager::_reclaimMemory(const std::string& name){
+void VmManager::_issueTerminationToVmThreads(const std::string &name) {
+	auto itm = terminationMutexes.find(name);
+	if (itm == terminationMutexes.end()) {
+		std::cerr << "VmManager::terminationIssueThread: no mutex found for "
+				  << name << std::endl;
+		return;
+	}
+
+	std::lock_guard lck(*itm->second);
+
+	auto it = terminationFlags.find(name);
+	if (it != terminationFlags.end()) {
+		it->second = true;
+	} else {
+		std::cerr << "VmManager::terminationIssueThread: no flag found for "
+				  << name << std::endl;
+	}
+}
+
+void VmManager::_reclaimMemory(const std::string &name) {
 	auto ipThread = ipUpdaterThreads.find(name);
 	if (ipThread != ipUpdaterThreads.end()) {
 		if (ipThread->second != nullptr and ipThread->second->joinable()) {
 			ipThread->second->join();
 			delete ipThread->second;
 			ipUpdaterThreads.erase(name);
-			std::cout << "VmManager::memoryReclamationThread: ip thread for "
-					  << name << " terminated" << std::endl;
+			std::cout << "VmManager::_reclaimMemory: ip thread for " << name
+					  << " terminated" << std::endl;
 		}
 	} else {
-		std::cerr
-			<< "VmManager::memoryReclamationThread: no ipUpdater thread "
-			   "found for "
-			<< name << std::endl;
+		std::cerr << "VmManager::_reclaimMemory no ipUpdater thread "
+					 "found for "
+				  << name << std::endl;
 	}
 
 	auto drawThread = drawingThreads.find(name);
@@ -399,12 +405,11 @@ void VmManager::_reclaimMemory(const std::string& name){
 			drawThread->second->join();
 			delete drawThread->second;
 			drawingThreads.erase(name);
-			std::cout
-				<< "VmManager::memoryReclamationThread: draw thread for "
-				<< name << " terminated" << std::endl;
+			std::cout << "VmManager::_reclaimMemory: draw thread for " << name
+					  << " terminated" << std::endl;
 		}
 	} else {
-		std::cerr << "VmManager::memoryReclamationThread: no draw thread "
+		std::cerr << "VmManager::_reclaimMemory: no draw thread "
 					 "found for "
 				  << name << std::endl;
 	}

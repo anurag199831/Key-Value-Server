@@ -13,10 +13,10 @@ using namespace std;
 // Constructor to create a VM object and start a VM with the given name.
 VM::VM(const virConnectPtr &connPtr, const string &name) {
 	if (connPtr == NULL) throw invalid_argument("Invalid connection object\n");
-	vector<string> names = getInactiveDomainNames(connPtr);
+	vector<string> names = getAllDefinedDomainNames(connPtr);
 	if (find(names.begin(), names.end(), name) == names.end()) {
 		throw invalid_argument(
-			"VM::VM(): no inactive VM found with name=" + name + "\n");
+			"VM::VM(): no VM found with name " + name + "\n");
 	}
 	domPtr = virDomainLookupByName(connPtr, name.c_str());
 	if (domPtr == NULL) {
@@ -27,7 +27,7 @@ VM::VM(const virConnectPtr &connPtr, const string &name) {
 // Constructor to create a VM object and start any random vm.
 VM::VM(const virConnectPtr &conn) {
 	if (conn == NULL) throw invalid_argument("Invalid connection object\n");
-	vector<string> inactiveDomains = getInactiveDomainNames(conn);
+	vector<string> inactiveDomains = getAllDefinedDomainNames(conn);
 	virDomainPtr dom;
 	if (inactiveDomains.empty()) {
 		throw runtime_error(
@@ -216,7 +216,7 @@ double VM::_convertStatMapToUtil(const unordered_map<string, string> &map) {
 		iter = map.find(cpu_name + ".state");
 		if (iter != map.end() and iter->second == "1") {
 			iter = map.find(cpu_name + ".time");
-			if (iter != map.end()) cpu_util += atol(iter->second.c_str());
+			if (iter != map.end()) cpu_util += atof(iter->second.c_str());
 		}
 	}
 	return cpu_util / vcpu_current;

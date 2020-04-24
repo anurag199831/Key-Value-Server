@@ -54,6 +54,8 @@ class VmManager : public Gtk::Window {
 
    protected:
 	Gtk::Box m_box1;
+	unordered_map<std::string,Gtk::Button> startButtons;
+	unordered_map<std::string,Gtk::Button> shutButtons;
 
 	// Signal handlers:
 	void on_start_button_clicked(const std::string &name, Gtk::Box *box,
@@ -66,6 +68,7 @@ class VmManager : public Gtk::Window {
 	void _spawnDrawingThread(const std::string &name, Gtk::Box *box);
 	void _issueTerminationToVmThreads(const std::string &name);
 	void _reclaimMemory(const string &name);
+	void _resetTerminationFlagForVmThreads(const string &name);
 };
 
 #endif	// ASSIGNMENT_2_VMMANAGER_H

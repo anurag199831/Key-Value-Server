@@ -17,13 +17,13 @@ private:
 	virDomainPtr domPtr;
 
 	// Inline private member functions
-	inline unordered_map<string, string> _getDomainStatRecordMap(
+	static inline unordered_map<string, string> _getDomainStatRecordMap(
 			const virDomainStatsRecordPtr& record);
-	inline string _getTypedParamValue(const virTypedParameterPtr& item);
+	static inline string _getTypedParamValue(const virTypedParameterPtr& item);
 
 	// private member functions
-	double _convertStatMapToUtil(const unordered_map<string, string>& map);
-	long _getVmStateFromMap(const unordered_map<string, string>& map);
+	static double _convertStatMapToUtil(const unordered_map<string, string>& map);
+	static long _getVmStateFromMap(const unordered_map<string, string>& map);
 	unordered_map<string, string> _getStatsforDomain(const virConnectPtr& conn);
 
 public:
