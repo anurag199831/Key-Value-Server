@@ -66,17 +66,7 @@ VmManager::VmManager() : sanitizerThreadTerminationFlag(false) {
 
 VmManager::~VmManager() {
 	for (auto &&i : terminationMutexes) {
-		{
-			std::lock_guard lck(*i.second);
-
-			auto it = terminationFlags.find(i.first);
-			if (it != terminationFlags.end()) {
-				it->second = true;
-			} else {
-				std::cerr << "VmManager::~VmManager: no flag found for "
-						  << i.first << std::endl;
-			}
-		}
+		_issueTerminationToVmThreads(i.first);
 	}
 
 	{

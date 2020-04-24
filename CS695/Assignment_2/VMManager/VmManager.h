@@ -54,15 +54,14 @@ class VmManager : public Gtk::Window {
 
    protected:
 	Gtk::Box m_box1;
-	unordered_map<std::string,Gtk::Button> startButtons;
-	unordered_map<std::string,Gtk::Button> shutButtons;
+	unordered_map<std::string, Gtk::Button> startButtons;
+	unordered_map<std::string, Gtk::Button> shutButtons;
 
 	// Signal handlers:
 	void on_start_button_clicked(const std::string &name, Gtk::Box *box,
 								 Gtk::Button *start, Gtk::Button *shut);
 	void on_shut_button_clicked(const std::string &name, Gtk::Button *start,
 								Gtk::Button *shut);
-
 
 	void _spawnIPThread(const std::string &name, Gtk::Box *box);
 	void _spawnDrawingThread(const std::string &name, Gtk::Box *box);
