@@ -15,8 +15,8 @@ VM::VM(const virConnectPtr &connPtr, const string &name) {
 	if (connPtr == NULL) throw invalid_argument("Invalid connection object\n");
 	vector<string> names = getAllDefinedDomainNames(connPtr);
 	if (find(names.begin(), names.end(), name) == names.end()) {
-		throw invalid_argument(
-			"VM::VM(): no VM found with name " + name + "\n");
+		throw invalid_argument("VM::VM(): no VM found with name " + name +
+							   "\n");
 	}
 	domPtr = virDomainLookupByName(connPtr, name.c_str());
 	if (domPtr == NULL) {
@@ -293,7 +293,8 @@ bool VM::isPoweredOn() {
 	if (state == VIR_DOMAIN_NOSTATE)
 		cout << "VM::isPoweredOn: " << getName() << " has no state" << endl;
 	else if (state == VIR_DOMAIN_RUNNING) {
-//		cout << "VM::isPoweredOn: " << getName() << " is running" << endl;
+		//		cout << "VM::isPoweredOn: " << getName() << " is running" <<
+		//endl;
 	} else if (state == VIR_DOMAIN_BLOCKED)
 		cout << "VM::isPoweredOn: " << getName() << " is blocked on resource"
 			 << endl;
@@ -340,6 +341,30 @@ vector<string> VM::getAllDefinedDomainNames(const virConnectPtr &conn) {
 	vector<string> vec;
 	virDomainPtr *domains;
 	int ret = virConnectListAllDomains(conn, &domains, 0);
+	if (ret < 0) {
+		cerr << "VM::getInactiveDomainNames: call to virConnectListAllDomains "
+				"failed"
+			 << endl;
+		return vec;
+	}
+	string str;
+	for (int i = 0; i < ret; i++) {
+		const char *name = virDomainGetName(domains[i]);
+		str = string(name);
+		if (not str.empty()) { vec.emplace_back(str); }
+		virDomainFree(domains[i]);
+	}
+	free(domains);
+	return vec;
+}
+
+vector<string> VM::getAllActiveDomainNames(const virConnectPtr &conn) {
+	vector<string> vec;
+	virDomainPtr *domains;
+	int ret = virConnectListAllDomains(conn, &domains,
+									   VIR_CONNECT_LIST_DOMAINS_RUNNING |
+										   VIR_CONNECT_LIST_DOMAINS_ACTIVE |
+										   VIR_DOMAIN_PAUSED);
 	if (ret < 0) {
 		cerr << "VM::getInactiveDomainNames: call to virConnectListAllDomains "
 				"failed"

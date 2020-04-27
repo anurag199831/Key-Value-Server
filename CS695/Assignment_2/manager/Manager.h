@@ -20,6 +20,8 @@ using namespace std;
 
 class Manager {
    private:
+	static const size_t MAX_UTIL_VEC_LENGTH=128;
+
 	virConnectPtr conn;
 	unordered_map<string, VM*> domains;
 	unordered_map<string, mutex*> locks;
@@ -47,6 +49,7 @@ class Manager {
 	vector<int> getUtilVector(const string& nameOfVm);
 	vector<string> getAllDefinedDomainNames();
 	void notifyAboutServer();
+	void attachToAlreadyRunningVms();
 };
 
 #endif	// ASSIGNMENT_2_MANAGER_H

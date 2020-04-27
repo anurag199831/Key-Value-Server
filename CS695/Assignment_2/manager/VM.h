@@ -20,10 +20,10 @@ private:
 	static inline unordered_map<string, string> _getDomainStatRecordMap(
 			const virDomainStatsRecordPtr& record);
 	static inline string _getTypedParamValue(const virTypedParameterPtr& item);
-
-	// private member functions
 	static double _convertStatMapToUtil(const unordered_map<string, string>& map);
 	static long _getVmStateFromMap(const unordered_map<string, string>& map);
+
+	// private member functions
 	unordered_map<string, string> _getStatsforDomain(const virConnectPtr& conn);
 
 public:
@@ -43,6 +43,7 @@ public:
 	// static functions
 	static vector<string> getAllDefinedDomainNames(const virConnectPtr& conn);
 	static vector<string> getInactiveDomainNames(const virConnectPtr& conn);
+	static vector<string> getAllActiveDomainNames(virConnectPtr const& conn);
 };
 
 

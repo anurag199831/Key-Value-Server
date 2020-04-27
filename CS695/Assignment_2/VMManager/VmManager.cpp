@@ -10,6 +10,7 @@
 
 VmManager::VmManager() : sanitizerThreadTerminationFlag(false) {
 	mgr = new Manager();
+	mgr->attachToAlreadyRunningVms();
 
 	sanitiserThread = new thread([this] {
 		while (true) {
@@ -130,9 +131,8 @@ void VmManager::_fillViewsInGrid(Gtk::Grid *grid) {
 
 		_getBoxWithWidgets(outerBox);
 		_fillBoxWithName(outerBox, name);
-		_fillBoxWithIP(outerBox, name);
 		_setButtonsInBox(outerBox, name);
-
+		_launchVmThreads(outerBox, name);
 		grid->attach(*outerBox, pos % 2, pos / 2);
 		pos++;
 	}
@@ -193,6 +193,11 @@ void VmManager::_fillBoxWithIP(Gtk::Box *box, const string &nameOfVM) {
 			   "of the box"
 			<< std::endl;
 	}
+}
+
+void VmManager::_launchVmThreads(Gtk::Box *box, string &name) {
+	_spawnIPThread(name, box);
+	_spawnDrawingThread(name, box);
 }
 
 void VmManager::_setButtonsInBox(Gtk::Box *box, const string &nameOfVM) {
@@ -264,16 +269,13 @@ void VmManager::on_shut_button_clicked(const std::string &name,
 }
 
 void VmManager::_powerOnImpl(const std::string &name, Gtk::Box *box) {
-	_resetTerminationFlagForVmThreads(name);
+//	_resetTerminationFlagForVmThreads(name);
 
 	auto launcherThread = new thread([this, name]() {
 		mgr->startNewVm(name);
 		if (not mgr->isVmPowered(name)) { mgr->powerOn(name); }
 		mgr->startWatching(name);
 	});
-
-	_spawnIPThread(name, box);
-	_spawnDrawingThread(name, box);
 
 	{
 		std::lock_guard lck(sanitizerMutex);
@@ -282,11 +284,10 @@ void VmManager::_powerOnImpl(const std::string &name, Gtk::Box *box) {
 }
 
 void VmManager::_shutdownImpl(const string &name) {
-	_issueTerminationToVmThreads(name);
+//	_issueTerminationToVmThreads(name);
 
 	auto shutdownThread = new thread([&] {
 		mgr->shutdown(name);
-		_reclaimMemory(name);
 	});
 	{
 		std::lock_guard lck(sanitizerMutex);

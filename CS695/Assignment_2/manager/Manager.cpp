@@ -339,3 +339,11 @@ string Manager::getIP(const string &nameOfVm) {
 	auto vm = it->second;
 	return vm->getIp();
 }
+
+void Manager::attachToAlreadyRunningVms(){
+	auto runningVms= VM::getAllActiveDomainNames(conn);
+	for(auto&& vm: runningVms){
+		startNewVm(vm);
+		startWatching(vm);
+	}
+}

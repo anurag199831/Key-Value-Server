@@ -68,6 +68,7 @@ class VmManager : public Gtk::Window {
 	void _issueTerminationToVmThreads(const std::string &name);
 	void _reclaimMemory(const string &name);
 	void _resetTerminationFlagForVmThreads(const string &name);
+	void _launchVmThreads(Gtk::Box *pBox, string &basicString);
 };
 
 #endif	// ASSIGNMENT_2_VMMANAGER_H
