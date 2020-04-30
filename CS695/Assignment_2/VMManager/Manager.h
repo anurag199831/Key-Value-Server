@@ -20,17 +20,31 @@ using namespace std;
 
 class Manager {
    private:
-	static const size_t MAX_UTIL_VEC_LENGTH=128;
+	static const size_t LOAD_IDLE_THRESHOLD_TIME_IN_SECS = 60;
+	static const size_t LOAD_OVERLOAD_THRESHOLD_TIME_IN_SECS = 30;
+	static const size_t LOAD_RESET_THRESHOLD_TIME_IN_SECS = 5;
+
+	static const size_t LOAD_IDLE_THRESHOLD_PERCENT = 15;
+	static const size_t LOAD_OVERLOAD_THRESHOLD_PERCENT = 80;
+	static const size_t LOAD_RESET_THRESHOLD_PERCENT = 50;
+
+	const string ipFile = "server.dat";
+
+	thread* loadHandlerThread;
+	mutex loadHandlerMutex;
+	bool loadHandlerTerminationFlag = true;
 
 	virConnectPtr conn;
 	unordered_map<string, VM*> domains;
-	unordered_map<string, mutex*> locks;
 	unordered_map<string, list<int>*> utilList;
 	unordered_map<string, bool> threadTerminationFlags;
 	unordered_map<string, mutex*> threadTerminationLocks;
-	vector<thread *> threads;
-	const string ipFile = "server.dat";
-
+	unordered_map<string, mutex*> locks;
+	unordered_map<string, mutex*> loadLocks;
+	// tuple of (last consecutive overloaded seconds,last consecutive idle
+	// seconds, reset counter, isOverloaded flag, canPowerOff flag)
+	unordered_map<string, tuple<int, int, int, bool, bool>> load;
+	vector<thread*> utilThreads;
 
 	void _watch(string nameOfVm);
 	bool _writeIpToFile(const string& ip);

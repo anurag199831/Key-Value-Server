@@ -15,7 +15,7 @@
 #include <thread>
 #include <unordered_map>
 
-#include "../manager/Manager.h"
+#include "Manager.h"
 
 class VmManager : public Gtk::Window {
    private:

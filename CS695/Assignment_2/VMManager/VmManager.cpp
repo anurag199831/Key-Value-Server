@@ -111,7 +111,7 @@ VmManager::~VmManager() {
 
 	if (drawingThreads.empty() and ipUpdaterThreads.empty() and
 		terminationMutexes.empty()) {
-		std::cout << "VmManager::~VMManager: All threads and objects destroyed"
+		std::cout << "VmManager::~VMManager: All utilThreads and objects destroyed"
 				  << std::endl;
 	}
 
