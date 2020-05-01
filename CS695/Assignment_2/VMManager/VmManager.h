@@ -38,7 +38,7 @@ class VmManager : public Gtk::Window {
 
 	static void _fillBoxWithName(Gtk::Box *box, const string &nameOfVM);
 
-	void _fillBoxWithIP(Gtk::Box *box, const string &nameOfVM);
+	bool _fillBoxWithIP(Gtk::Box *box, const string &nameOfVM);
 
 	void _drawGraphInBox(Gtk::Box *box, const string &nameOfVm, bool clear);
 

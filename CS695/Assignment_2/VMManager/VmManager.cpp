@@ -111,8 +111,9 @@ VmManager::~VmManager() {
 
 	if (drawingThreads.empty() and ipUpdaterThreads.empty() and
 		terminationMutexes.empty()) {
-		std::cout << "VmManager::~VMManager: All utilThreads and objects destroyed"
-				  << std::endl;
+		std::cout
+			<< "VmManager::~VMManager: All utilThreads and objects destroyed"
+			<< std::endl;
 	}
 
 	delete mgr;
@@ -173,14 +174,19 @@ void VmManager::_fillBoxWithName(Gtk::Box *box, const string &nameOfVM) {
 	}
 }
 
-void VmManager::_fillBoxWithIP(Gtk::Box *box, const string &nameOfVM) {
+bool VmManager::_fillBoxWithIP(Gtk::Box *box, const string &nameOfVM) {
 	string ip;
+	bool retVal = false;
 	if (mgr->isVmPowered(nameOfVM)) {
 		ip = mgr->getIP(nameOfVM);
 	} else {
 		ip = "--";
 	}
-	if (ip.empty()) { ip = "--"; }
+	if (ip.empty()) {
+		ip = "--";
+	} else if (ip != "--") {
+		retVal = true;
+	}
 
 	auto children = box->get_children();
 	Gtk::Widget *name = children.at(2);
@@ -193,6 +199,7 @@ void VmManager::_fillBoxWithIP(Gtk::Box *box, const string &nameOfVM) {
 			   "of the box"
 			<< std::endl;
 	}
+	return retVal;
 }
 
 void VmManager::_launchVmThreads(Gtk::Box *box, string &name) {
@@ -269,7 +276,7 @@ void VmManager::on_shut_button_clicked(const std::string &name,
 }
 
 void VmManager::_powerOnImpl(const std::string &name, Gtk::Box *box) {
-//	_resetTerminationFlagForVmThreads(name);
+	//	_resetTerminationFlagForVmThreads(name);
 
 	auto launcherThread = new thread([this, name]() {
 		mgr->startNewVm(name);
@@ -284,11 +291,9 @@ void VmManager::_powerOnImpl(const std::string &name, Gtk::Box *box) {
 }
 
 void VmManager::_shutdownImpl(const string &name) {
-//	_issueTerminationToVmThreads(name);
+	//	_issueTerminationToVmThreads(name);
 
-	auto shutdownThread = new thread([&] {
-		mgr->shutdown(name);
-	});
+	auto shutdownThread = new thread([&] { mgr->shutdown(name); });
 	{
 		std::lock_guard lck(sanitizerMutex);
 		launchThreads.push_back(shutdownThread);
@@ -325,7 +330,12 @@ void VmManager::_spawnIPThread(const string &name, Gtk::Box *box) {
 							  << std::endl;
 					break;
 				} else {
-					_fillBoxWithIP(box, name);
+					if (_fillBoxWithIP(box, name)) {
+						std::cout << "VmManager:ipUpdaterThread: exiting "
+									 "thread after setting IP"
+								  << std::endl;
+						break;
+					}
 				}
 			}
 			this_thread::sleep_for(chrono::seconds(1));

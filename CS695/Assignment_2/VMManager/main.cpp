@@ -8,7 +8,7 @@ int main(int argc, char *argv[]) {
 	VmManager window;
 	Gtk::Allocation alloc;
 
-	alloc.set_width(1280);
+	alloc.set_width(1200);
 	alloc.set_height(720);
 	window.set_allocation(alloc);
 	// Shows the window and returns when it is closed.
