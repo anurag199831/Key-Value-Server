@@ -1,3 +1,0 @@
-/home/pranav/CLionProjects/Assignment_2/VMManager/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/pranav/CLionProjects/Assignment_2/VMManager/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/pranav/CLionProjects/Assignment_2/VMManager/cmake-build-debug/CMakeFiles/VM_Manager.dir
