@@ -69,7 +69,7 @@ void Client::start(const string& inputFile, const string& outFile) {
 	int request = 0;
 	char buffer[MAX_BUFFER_SIZE];
 	const string serverFile =
-		"/home/pranav/Repos/IITB/CS695/Assignment_2/vm_manager/server.dat";
+		"../build-manager/server.dat";
 
 	ifstream infile;
 

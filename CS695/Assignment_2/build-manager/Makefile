@@ -111,17 +111,17 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named VM_Manager
+# Target rules for targets named Manager
 
 # Build rule for target.
-VM_Manager: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 VM_Manager
-.PHONY : VM_Manager
+Manager: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 Manager
+.PHONY : Manager
 
 # fast build rule for target.
-VM_Manager/fast:
-	$(MAKE) -f CMakeFiles/VM_Manager.dir/build.make CMakeFiles/VM_Manager.dir/build
-.PHONY : VM_Manager/fast
+Manager/fast:
+	$(MAKE) -f CMakeFiles/Manager.dir/build.make CMakeFiles/Manager.dir/build
+.PHONY : Manager/fast
 
 Graph.o: Graph.cpp.o
 
@@ -129,7 +129,7 @@ Graph.o: Graph.cpp.o
 
 # target to build an object file
 Graph.cpp.o:
-	$(MAKE) -f CMakeFiles/VM_Manager.dir/build.make CMakeFiles/VM_Manager.dir/Graph.cpp.o
+	$(MAKE) -f CMakeFiles/Manager.dir/build.make CMakeFiles/Manager.dir/Graph.cpp.o
 .PHONY : Graph.cpp.o
 
 Graph.i: Graph.cpp.i
@@ -138,7 +138,7 @@ Graph.i: Graph.cpp.i
 
 # target to preprocess a source file
 Graph.cpp.i:
-	$(MAKE) -f CMakeFiles/VM_Manager.dir/build.make CMakeFiles/VM_Manager.dir/Graph.cpp.i
+	$(MAKE) -f CMakeFiles/Manager.dir/build.make CMakeFiles/Manager.dir/Graph.cpp.i
 .PHONY : Graph.cpp.i
 
 Graph.s: Graph.cpp.s
@@ -147,7 +147,7 @@ Graph.s: Graph.cpp.s
 
 # target to generate assembly for a file
 Graph.cpp.s:
-	$(MAKE) -f CMakeFiles/VM_Manager.dir/build.make CMakeFiles/VM_Manager.dir/Graph.cpp.s
+	$(MAKE) -f CMakeFiles/Manager.dir/build.make CMakeFiles/Manager.dir/Graph.cpp.s
 .PHONY : Graph.cpp.s
 
 Manager.o: Manager.cpp.o
@@ -156,7 +156,7 @@ Manager.o: Manager.cpp.o
 
 # target to build an object file
 Manager.cpp.o:
-	$(MAKE) -f CMakeFiles/VM_Manager.dir/build.make CMakeFiles/VM_Manager.dir/Manager.cpp.o
+	$(MAKE) -f CMakeFiles/Manager.dir/build.make CMakeFiles/Manager.dir/Manager.cpp.o
 .PHONY : Manager.cpp.o
 
 Manager.i: Manager.cpp.i
@@ -165,7 +165,7 @@ Manager.i: Manager.cpp.i
 
 # target to preprocess a source file
 Manager.cpp.i:
-	$(MAKE) -f CMakeFiles/VM_Manager.dir/build.make CMakeFiles/VM_Manager.dir/Manager.cpp.i
+	$(MAKE) -f CMakeFiles/Manager.dir/build.make CMakeFiles/Manager.dir/Manager.cpp.i
 .PHONY : Manager.cpp.i
 
 Manager.s: Manager.cpp.s
@@ -174,7 +174,7 @@ Manager.s: Manager.cpp.s
 
 # target to generate assembly for a file
 Manager.cpp.s:
-	$(MAKE) -f CMakeFiles/VM_Manager.dir/build.make CMakeFiles/VM_Manager.dir/Manager.cpp.s
+	$(MAKE) -f CMakeFiles/Manager.dir/build.make CMakeFiles/Manager.dir/Manager.cpp.s
 .PHONY : Manager.cpp.s
 
 VM.o: VM.cpp.o
@@ -183,7 +183,7 @@ VM.o: VM.cpp.o
 
 # target to build an object file
 VM.cpp.o:
-	$(MAKE) -f CMakeFiles/VM_Manager.dir/build.make CMakeFiles/VM_Manager.dir/VM.cpp.o
+	$(MAKE) -f CMakeFiles/Manager.dir/build.make CMakeFiles/Manager.dir/VM.cpp.o
 .PHONY : VM.cpp.o
 
 VM.i: VM.cpp.i
@@ -192,7 +192,7 @@ VM.i: VM.cpp.i
 
 # target to preprocess a source file
 VM.cpp.i:
-	$(MAKE) -f CMakeFiles/VM_Manager.dir/build.make CMakeFiles/VM_Manager.dir/VM.cpp.i
+	$(MAKE) -f CMakeFiles/Manager.dir/build.make CMakeFiles/Manager.dir/VM.cpp.i
 .PHONY : VM.cpp.i
 
 VM.s: VM.cpp.s
@@ -201,7 +201,7 @@ VM.s: VM.cpp.s
 
 # target to generate assembly for a file
 VM.cpp.s:
-	$(MAKE) -f CMakeFiles/VM_Manager.dir/build.make CMakeFiles/VM_Manager.dir/VM.cpp.s
+	$(MAKE) -f CMakeFiles/Manager.dir/build.make CMakeFiles/Manager.dir/VM.cpp.s
 .PHONY : VM.cpp.s
 
 VmManager.o: VmManager.cpp.o
@@ -210,7 +210,7 @@ VmManager.o: VmManager.cpp.o
 
 # target to build an object file
 VmManager.cpp.o:
-	$(MAKE) -f CMakeFiles/VM_Manager.dir/build.make CMakeFiles/VM_Manager.dir/VmManager.cpp.o
+	$(MAKE) -f CMakeFiles/Manager.dir/build.make CMakeFiles/Manager.dir/VmManager.cpp.o
 .PHONY : VmManager.cpp.o
 
 VmManager.i: VmManager.cpp.i
@@ -219,7 +219,7 @@ VmManager.i: VmManager.cpp.i
 
 # target to preprocess a source file
 VmManager.cpp.i:
-	$(MAKE) -f CMakeFiles/VM_Manager.dir/build.make CMakeFiles/VM_Manager.dir/VmManager.cpp.i
+	$(MAKE) -f CMakeFiles/Manager.dir/build.make CMakeFiles/Manager.dir/VmManager.cpp.i
 .PHONY : VmManager.cpp.i
 
 VmManager.s: VmManager.cpp.s
@@ -228,7 +228,7 @@ VmManager.s: VmManager.cpp.s
 
 # target to generate assembly for a file
 VmManager.cpp.s:
-	$(MAKE) -f CMakeFiles/VM_Manager.dir/build.make CMakeFiles/VM_Manager.dir/VmManager.cpp.s
+	$(MAKE) -f CMakeFiles/Manager.dir/build.make CMakeFiles/Manager.dir/VmManager.cpp.s
 .PHONY : VmManager.cpp.s
 
 main.o: main.cpp.o
@@ -237,7 +237,7 @@ main.o: main.cpp.o
 
 # target to build an object file
 main.cpp.o:
-	$(MAKE) -f CMakeFiles/VM_Manager.dir/build.make CMakeFiles/VM_Manager.dir/main.cpp.o
+	$(MAKE) -f CMakeFiles/Manager.dir/build.make CMakeFiles/Manager.dir/main.cpp.o
 .PHONY : main.cpp.o
 
 main.i: main.cpp.i
@@ -246,7 +246,7 @@ main.i: main.cpp.i
 
 # target to preprocess a source file
 main.cpp.i:
-	$(MAKE) -f CMakeFiles/VM_Manager.dir/build.make CMakeFiles/VM_Manager.dir/main.cpp.i
+	$(MAKE) -f CMakeFiles/Manager.dir/build.make CMakeFiles/Manager.dir/main.cpp.i
 .PHONY : main.cpp.i
 
 main.s: main.cpp.s
@@ -255,7 +255,7 @@ main.s: main.cpp.s
 
 # target to generate assembly for a file
 main.cpp.s:
-	$(MAKE) -f CMakeFiles/VM_Manager.dir/build.make CMakeFiles/VM_Manager.dir/main.cpp.s
+	$(MAKE) -f CMakeFiles/Manager.dir/build.make CMakeFiles/Manager.dir/main.cpp.s
 .PHONY : main.cpp.s
 
 # Help Target
@@ -266,7 +266,7 @@ help:
 	@echo "... depend"
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
-	@echo "... VM_Manager"
+	@echo "... Manager"
 	@echo "... Graph.o"
 	@echo "... Graph.i"
 	@echo "... Graph.s"

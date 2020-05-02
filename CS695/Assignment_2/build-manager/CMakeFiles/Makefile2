@@ -53,7 +53,7 @@ CMAKE_BINARY_DIR = /home/pranav/Repos/IITB/CS695/Assignment_2/build-manager
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
-all: CMakeFiles/VM_Manager.dir/all
+all: CMakeFiles/Manager.dir/all
 
 .PHONY : all
 
@@ -63,36 +63,36 @@ preinstall:
 .PHONY : preinstall
 
 # The main recursive "clean" target.
-clean: CMakeFiles/VM_Manager.dir/clean
+clean: CMakeFiles/Manager.dir/clean
 
 .PHONY : clean
 
 #=============================================================================
-# Target rules for target CMakeFiles/VM_Manager.dir
+# Target rules for target CMakeFiles/Manager.dir
 
 # All Build rule for target.
-CMakeFiles/VM_Manager.dir/all:
-	$(MAKE) -f CMakeFiles/VM_Manager.dir/build.make CMakeFiles/VM_Manager.dir/depend
-	$(MAKE) -f CMakeFiles/VM_Manager.dir/build.make CMakeFiles/VM_Manager.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/pranav/Repos/IITB/CS695/Assignment_2/build-manager/CMakeFiles --progress-num=1,2,3,4,5,6 "Built target VM_Manager"
-.PHONY : CMakeFiles/VM_Manager.dir/all
+CMakeFiles/Manager.dir/all:
+	$(MAKE) -f CMakeFiles/Manager.dir/build.make CMakeFiles/Manager.dir/depend
+	$(MAKE) -f CMakeFiles/Manager.dir/build.make CMakeFiles/Manager.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/pranav/Repos/IITB/CS695/Assignment_2/build-manager/CMakeFiles --progress-num=1,2,3,4,5,6 "Built target Manager"
+.PHONY : CMakeFiles/Manager.dir/all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/VM_Manager.dir/rule: cmake_check_build_system
+CMakeFiles/Manager.dir/rule: cmake_check_build_system
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/pranav/Repos/IITB/CS695/Assignment_2/build-manager/CMakeFiles 6
-	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/VM_Manager.dir/all
+	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/Manager.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/pranav/Repos/IITB/CS695/Assignment_2/build-manager/CMakeFiles 0
-.PHONY : CMakeFiles/VM_Manager.dir/rule
+.PHONY : CMakeFiles/Manager.dir/rule
 
 # Convenience name for target.
-VM_Manager: CMakeFiles/VM_Manager.dir/rule
+Manager: CMakeFiles/Manager.dir/rule
 
-.PHONY : VM_Manager
+.PHONY : Manager
 
 # clean rule for target.
-CMakeFiles/VM_Manager.dir/clean:
-	$(MAKE) -f CMakeFiles/VM_Manager.dir/build.make CMakeFiles/VM_Manager.dir/clean
-.PHONY : CMakeFiles/VM_Manager.dir/clean
+CMakeFiles/Manager.dir/clean:
+	$(MAKE) -f CMakeFiles/Manager.dir/build.make CMakeFiles/Manager.dir/clean
+.PHONY : CMakeFiles/Manager.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.
