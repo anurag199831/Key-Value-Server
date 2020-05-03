@@ -1,0 +1,1 @@
+/usr/bin/g++   -pthread   CMakeFiles/Server.dir/Server.cpp.o CMakeFiles/Server.dir/KVCache.cpp.o CMakeFiles/Server.dir/KVClientHandler.cpp.o CMakeFiles/Server.dir/KVServerLibrary.cpp.o CMakeFiles/Server.dir/KVStore.cpp.o CMakeFiles/Server.dir/ThreadPool.cpp.o  -o Server 

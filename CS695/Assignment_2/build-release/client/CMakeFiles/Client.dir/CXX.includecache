@@ -1,0 +1,36 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/pranav/Repos/IITB/CS695/Assignment_2/src/client/Client.cpp
+arpa/inet.h
+-
+netinet/in.h
+-
+unistd.h
+-
+fstream
+-
+iostream
+-
+thread
+-
+unordered_map
+-
+unordered_set
+-
+KVClientLibrary.cpp
+/home/pranav/Repos/IITB/CS695/Assignment_2/src/client/KVClientLibrary.cpp
+
+/home/pranav/Repos/IITB/CS695/Assignment_2/src/client/KVClientLibrary.cpp
+iostream
+-
+regex
+-
+vector
+-
+
