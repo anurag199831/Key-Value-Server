@@ -11,6 +11,7 @@
 
 class Graph : public Gtk::DrawingArea {
    private:
+	std::mutex m;
 	std::vector<int> mCurrState;
 	std::vector<int> mPrevState;
 	enum { DRAW_HOLD, DRAW_START, DRAW_CLEAR } mState;

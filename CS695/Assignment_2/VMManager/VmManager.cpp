@@ -9,10 +9,15 @@
 #include "Graph.h"
 
 VmManager::VmManager() : sanitizerThreadTerminationFlag(false) {
-	mgr = new Manager();
-	mgr->attachToAlreadyRunningVms();
+	std::cout << "VmManager::VmManager(): called" << endl;
 
-	sanitiserThread = new thread([this] {
+	mgr = new Manager();
+	auto activeVms = mgr->attachToTheRunningVms();
+
+	this_thread::sleep_for(chrono::seconds(1));
+
+	sanitiserThread = new thread([&] {
+		this_thread::sleep_for(chrono::seconds(10));
 		while (true) {
 			{
 				std::lock_guard lck(sanitizerMutex);
@@ -21,7 +26,7 @@ VmManager::VmManager() : sanitizerThreadTerminationFlag(false) {
 					 /* no increment */) {
 					if (*it != nullptr and (*it)->joinable()) {
 						(*it)->join();
-						std::cout << "VmManager::~sanitizerThread: "
+						std::cout << "VmManager::sanitizerThread: "
 									 "launchThread destroyed"
 								  << std::endl;
 					}
@@ -29,18 +34,60 @@ VmManager::VmManager() : sanitizerThreadTerminationFlag(false) {
 				}
 			}
 
+			// Check for any VMs that are newly powered On
+			{
+				auto names = mgr->getAllActiveVmNames();
+				for (auto &&name : names) {
+					auto it = drawingThreads.find(name);
+					if (it == drawingThreads.end()) {
+						std::cout
+							<< "VmManager::sanitizerThread: new VM powered "
+							   "on. Starting threads."
+							<< std::endl;
+						_resetTerminationFlagForVmThreads(name);
+						auto box = _getBoxFromGrid(name);
+						if (box != nullptr) {
+							_launchVmThreads(box, name);
+						} else {
+							std::cerr << "VmManager::sanitizerThread: no box "
+										 "widget found for "
+									  << name << std::endl;
+						}
+					}
+				}
+			}
+
+			// Check for any shutdown VMs
+			{
+				for (auto &&i : drawingThreads) {
+					std::cout << "+++++++++++" << i.first << "+++++++++++"
+							  << std::endl;
+					if (not mgr->isVmPowered(i.first)) {
+						auto name = i.first;
+						std::cout << "VmManager::sanitizerThread: Cleaning up "
+									 "the shutdown VM "
+								  << name << std::endl;
+						_issueTerminationToVmThreads(name);
+						_reclaimMemory(name);
+						break;
+					}
+				}
+				std::cout << "========================================="
+						  << std::endl;
+			}
 			{
 				std::lock_guard lck(sanitizerMutex);
 				if (sanitizerThreadTerminationFlag and launchThreads.empty()) {
 					std::cout << "VmManager::sanitizerThread: destroying "
 								 "sanitizer thread"
 							  << std::endl;
-					sanitizerThreadTerminationFlag = false;
 					break;
 				}
 			}
 			this_thread::sleep_for(chrono::seconds(1));
 		}
+		std::cout << "VmManager::sanitizerThread: Exiting sanitizerThread"
+				  << endl;
 	});
 
 	add(m_box1);
@@ -63,9 +110,24 @@ VmManager::VmManager() : sanitizerThreadTerminationFlag(false) {
 
 	_fillViewsInGrid(mGrid);
 	show_all_children();
+
+	// std::cout << "VmManager::getBoxFromGrid: Already Active VM count: "
+	// 		  << activeVms.size() << endl;
+
+	for (auto &&i : activeVms) {
+		auto box = _getBoxFromGrid(i);
+		if (box != nullptr) {
+			_launchVmThreads(box, i);
+		} else {
+			std::cout << "VmManager::VmManager(): No box found for " << i
+					  << endl;
+		}
+	}
+	std::cout << "VmManager::VmManager(): called" << endl;
 }
 
 VmManager::~VmManager() {
+	// cout << "VmManager::~VmManager(): called" << endl;
 	for (auto &&i : terminationMutexes) {
 		_issueTerminationToVmThreads(i.first);
 	}
@@ -83,7 +145,8 @@ VmManager::~VmManager() {
 	}
 
 	for (auto it = ipUpdaterThreads.cbegin();
-		 it != ipUpdaterThreads.cend() /* not hoisted */;
+		 it != ipUpdaterThreads.cend() /* not hoisted */
+		 ;
 		 /* no increment */) {
 		if (it->second != nullptr) it->second->join();
 		std::cout << "VmManager::~VMManager: ipThread destroyed for "
@@ -111,15 +174,16 @@ VmManager::~VmManager() {
 
 	if (drawingThreads.empty() and ipUpdaterThreads.empty() and
 		terminationMutexes.empty()) {
-		std::cout
-			<< "VmManager::~VMManager: All utilThreads and objects destroyed"
-			<< std::endl;
+		std::cout << "VmManager::~VMManager: All threads and objects destroyed"
+				  << std::endl;
 	}
 
 	delete mgr;
+	// cout << "VmManager::~VmManager(): exited" << endl;
 }
 
 void VmManager::_fillViewsInGrid(Gtk::Grid *grid) {
+	// cout << "VmManager::_fillViewsInGrid(Gtk::Grid *grid) called" << endl;
 	auto namesOfVM = mgr->getAllDefinedDomainNames();
 
 	int pos = 0;
@@ -133,13 +197,15 @@ void VmManager::_fillViewsInGrid(Gtk::Grid *grid) {
 		_getBoxWithWidgets(outerBox);
 		_fillBoxWithName(outerBox, name);
 		_setButtonsInBox(outerBox, name);
-		_launchVmThreads(outerBox, name);
+		_fillBoxWithIP(outerBox, name);
 		grid->attach(*outerBox, pos % 2, pos / 2);
 		pos++;
 	}
+	// cout << "VmManager::_fillViewsInGrid(Gtk::Grid *grid) exiting" << endl;
 }
 
 void VmManager::_getBoxWithWidgets(Gtk::Box *box) {
+	// cout << "VmManager::_getBoxWithWidgets(Gtk::Box *box) called" << endl;
 	box->set_orientation(Gtk::Orientation::ORIENTATION_VERTICAL);
 	box->set_spacing(5);
 
@@ -159,9 +225,11 @@ void VmManager::_getBoxWithWidgets(Gtk::Box *box) {
 	box->pack_start(*ip, Gtk::PACK_SHRINK);
 	box->pack_start(*onButton, Gtk::PACK_SHRINK);
 	box->pack_start(*offButton, Gtk::PACK_SHRINK);
+	// cout << "VmManager::_getBoxWithWidgets(Gtk::Box *box) exited" << endl;
 }
 
 void VmManager::_fillBoxWithName(Gtk::Box *box, const string &nameOfVM) {
+	// cout << "VmManager::_fillBoxWithName called for " << nameOfVM << endl;
 	auto children = box->get_children();
 	Gtk::Widget *name = children.at(0);
 	if (GTK_IS_LABEL(name->gobj())) {
@@ -172,11 +240,13 @@ void VmManager::_fillBoxWithName(Gtk::Box *box, const string &nameOfVM) {
 					 "element of the box"
 				  << std::endl;
 	}
+	// cout << "VmManager::_fillBoxWithName exited for " << nameOfVM << endl;
 }
 
 bool VmManager::_fillBoxWithIP(Gtk::Box *box, const string &nameOfVM) {
+	bool flag = false;
+	// cout << "VmManager::_fillBoxWithIP called for " << nameOfVM << endl;
 	string ip;
-	bool retVal = false;
 	if (mgr->isVmPowered(nameOfVM)) {
 		ip = mgr->getIP(nameOfVM);
 	} else {
@@ -184,8 +254,8 @@ bool VmManager::_fillBoxWithIP(Gtk::Box *box, const string &nameOfVM) {
 	}
 	if (ip.empty()) {
 		ip = "--";
-	} else if (ip != "--") {
-		retVal = true;
+	} else {
+		flag = true;
 	}
 
 	auto children = box->get_children();
@@ -194,20 +264,64 @@ bool VmManager::_fillBoxWithIP(Gtk::Box *box, const string &nameOfVM) {
 		auto label = dynamic_cast<Gtk::Label *>(name);
 		label->set_text("IP: " + ip);
 	} else {
-		std::cerr
-			<< "VmManager::__fillBoxWithIP: label not found as third element "
-			   "of the box"
-			<< std::endl;
+		std::cerr << "VmManager::__fillBoxWithIP: label not found as "
+					 "third element "
+					 "of the box"
+				  << std::endl;
 	}
-	return retVal;
+	// cout << "VmManager::_fillBoxWithIP exited " << nameOfVM << endl;
+	return flag;
 }
 
-void VmManager::_launchVmThreads(Gtk::Box *box, string &name) {
+Gtk::Box *VmManager::_getBoxFromGrid(const string &nameOfVm) {
+	auto widgets = m_box1.get_children();
+	Gtk::Widget *wid = widgets.at(1);
+	if (GTK_IS_GRID(wid->gobj())) {
+		auto grid = dynamic_cast<Gtk::Grid *>(wid);
+		auto boxes = grid->get_children();
+		for (auto &&i : boxes) {
+			if (GTK_IS_BOX(i->gobj())) {
+				auto outerBox = dynamic_cast<Gtk::Box *>(i);
+				auto children = outerBox->get_children();
+				Gtk::Widget *name = children.at(0);
+				if (GTK_IS_LABEL(name->gobj())) {
+					auto label = dynamic_cast<Gtk::Label *>(name);
+					auto name = label->get_text();
+					if (nameOfVm == name) {
+						// std::cout << "VmManager::_getBoxFromGrid: Box Found!"
+						// 		  << endl;
+						return outerBox;
+					}
+				} else {
+					std::cerr << "VmManager::_getBoxFromGrid: label not "
+								 "found as first "
+								 "element of the box"
+							  << std::endl;
+				}
+			} else {
+				std::cout << "VmManager::_getBoxFromGrid: Widget inside a "
+							 "grid is "
+							 "not a box."
+						  << endl;
+			}
+		}
+
+	} else {
+		std::cerr << "VmManager::getBoxFromGrid: label not found as first "
+					 "element of the box"
+				  << std::endl;
+		return nullptr;
+	}
+	return nullptr;
+}
+
+void VmManager::_launchVmThreads(Gtk::Box *box, const string &name) {
 	_spawnIPThread(name, box);
 	_spawnDrawingThread(name, box);
 }
 
 void VmManager::_setButtonsInBox(Gtk::Box *box, const string &nameOfVM) {
+	// cout << "VmManager::_setButtonsInBox called" << endl;
 	auto children = box->get_children();
 	Gtk::Widget *startButton = children.at(3);
 	Gtk::Widget *shutButton = children.at(4);
@@ -230,14 +344,18 @@ void VmManager::_setButtonsInBox(Gtk::Box *box, const string &nameOfVM) {
 				sigc::mem_fun(*this, &VmManager::on_shut_button_clicked),
 				nameOfVM, start, shut));
 	} else {
-		std::cerr << "VmManager::_setButtonsInBox: button not found as fourth "
+		std::cerr << "VmManager::_setButtonsInBox: button not found as "
+					 "fourth "
 					 "element of the box"
 				  << std::endl;
 	}
+	// cout << "VmManager::_setButtonsInBox exited" << endl;
 }
 
 void VmManager::_drawGraphInBox(Gtk::Box *box, const string &nameOfVm,
 								bool clear) {
+	// cout << "VmManager::_drawGraphInBox called for " << nameOfVm <<
+	// endl;
 	auto vec = mgr->getUtilVector(nameOfVm);
 
 	auto children = box->get_children();
@@ -250,11 +368,12 @@ void VmManager::_drawGraphInBox(Gtk::Box *box, const string &nameOfVm,
 			graph->setVectorToDraw(vec);
 		}
 	} else {
-		std::cerr
-			<< "VmManager::_drawGraphInBox: label not found as third element "
-			   "of the box"
-			<< std::endl;
+		std::cerr << "VmManager::_drawGraphInBox: label not found as "
+					 "third element "
+					 "of the box"
+				  << std::endl;
 	}
+	// cout << "VmManager::_drawGraphInBox exited " << nameOfVm << endl;
 }
 
 // Signal Handlers
@@ -262,38 +381,51 @@ void VmManager::_drawGraphInBox(Gtk::Box *box, const string &nameOfVm,
 void VmManager::on_start_button_clicked(const std::string &name, Gtk::Box *box,
 										Gtk::Button *startButton,
 										Gtk::Button *shutButton) {
+	// cout << "VmManager::on_start_button_clicked called" << endl;
 	startButton->set_sensitive(false);
 	shutButton->set_sensitive(true);
 	_powerOnImpl(name, box);
+	// std::cout << "VmManager::on_start_button_clicked exiting" << endl;
 }
 
 void VmManager::on_shut_button_clicked(const std::string &name,
 									   Gtk::Button *startButton,
 									   Gtk::Button *shutButton) {
+	// std::cout << "VmManager::on_shut_button_clicked called" << endl;
 	startButton->set_sensitive(true);
 	shutButton->set_sensitive(false);
-	if (mgr->isVmPowered(name)) { _shutdownImpl(name); }
+	if (mgr->isVmPowered(name)) {
+		_shutdownImpl(name);
+	}
+	// cout << "VmManager::on_shut_button_clicked exiting" << endl;
 }
 
 void VmManager::_powerOnImpl(const std::string &name, Gtk::Box *box) {
-	//	_resetTerminationFlagForVmThreads(name);
-
+	// cout << "VmManager::_powerOnImpl called" << endl;
 	auto launcherThread = new thread([this, name]() {
 		mgr->startNewVm(name);
-		if (not mgr->isVmPowered(name)) { mgr->powerOn(name); }
-		mgr->startWatching(name);
+		if (not mgr->isVmPowered(name)) {
+			_resetTerminationFlagForVmThreads(name);
+			mgr->powerOn(name);
+			mgr->startWatching(name);
+			auto box = _getBoxFromGrid(name);
+			if (box != nullptr) _launchVmThreads(box, name);
+		}
 	});
 
 	{
 		std::lock_guard lck(sanitizerMutex);
 		launchThreads.push_back(launcherThread);
 	}
+	// cout << "VmManager::_powerOnImpl called" << endl;
 }
 
 void VmManager::_shutdownImpl(const string &name) {
-	//	_issueTerminationToVmThreads(name);
-
-	auto shutdownThread = new thread([&] { mgr->shutdown(name); });
+	_issueTerminationToVmThreads(name);
+	_reclaimMemory(name);
+	auto shutdownThread = new thread([&] {
+		if (mgr->isVmPowered(name)) mgr->shutdown(name);
+	});
 	{
 		std::lock_guard lck(sanitizerMutex);
 		launchThreads.push_back(shutdownThread);
@@ -301,11 +433,31 @@ void VmManager::_shutdownImpl(const string &name) {
 }
 
 void VmManager::_spawnDrawingThread(const std::string &name, Gtk::Box *box) {
+	// std::cout << "VmManager::_spawnDrawingThread called" << endl;
 	auto drawingThread = new thread([this, box, name] {
-		while (not terminationFlags.at(name)) {
+		bool terminationFlag = false;
+		while (not terminationFlag) {
 			{
-				std::lock_guard lck(*terminationMutexes.at(name));
-				if (terminationFlags.at(name)) {
+				auto m = terminationMutexes.find(name);
+				if (m == terminationMutexes.end()) {
+					std::cerr << "VmManager::drawingThread: no mutex "
+								 "found for "
+							  << name << std::endl;
+					break;
+				}
+				auto f = terminationFlags.find(name);
+				if (f == terminationFlags.end()) {
+					std::cerr << "VmManager::drawingThread: no flag "
+								 "found for "
+							  << name << std::endl;
+					break;
+				}
+
+				{
+					std::lock_guard lck(*m->second);
+					terminationFlag = f->second;
+				}
+				if ((not mgr->isVmPowered(name)) or terminationFlag) {
 					std::cout << "VmManager::drawingThread: exiting thread"
 							  << std::endl;
 					break;
@@ -318,22 +470,43 @@ void VmManager::_spawnDrawingThread(const std::string &name, Gtk::Box *box) {
 		_drawGraphInBox(box, name, true);
 	});
 	drawingThreads.insert(std::make_pair(name, drawingThread));
+	// cout << "VmManager::_spawnDrawingThread exiting" << endl;
 }
 
 void VmManager::_spawnIPThread(const string &name, Gtk::Box *box) {
+	// cout << "VmManager::_spawnIPThread called" << endl;
 	auto ipUpdaterThread = new thread([this, box, name] {
-		while (not terminationFlags.at(name)) {
+		bool terminationFlag = false;
+		while (not terminationFlag) {
 			{
-				std::lock_guard lck(*terminationMutexes.at(name));
-				if (terminationFlags.at(name)) {
+				auto m = terminationMutexes.find(name);
+				if (m == terminationMutexes.end()) {
+					std::cerr << "VmManager::ipUpdaterThread: no mutex "
+								 "found for "
+							  << name << std::endl;
+					break;
+				}
+				auto f = terminationFlags.find(name);
+				if (f == terminationFlags.end()) {
+					std::cerr << "VmManager::ipUpdaterThread: no flag "
+								 "found for "
+							  << name << std::endl;
+					break;
+				}
+
+				{
+					std::lock_guard lck(*m->second);
+					terminationFlag = f->second;
+				}
+				if ((not mgr->isVmPowered(name)) or terminationFlag) {
 					std::cout << "VmManager::ipUpdaterThread: exiting thread"
 							  << std::endl;
 					break;
 				} else {
 					if (_fillBoxWithIP(box, name)) {
-						std::cout << "VmManager:ipUpdaterThread: exiting "
-									 "thread after setting IP"
-								  << std::endl;
+						std::cout << "VmManager:ipUpdaterThread: IP updated. "
+									 "Terminating thread for "
+								  << name << "." << std::endl;
 						break;
 					}
 				}
@@ -342,9 +515,11 @@ void VmManager::_spawnIPThread(const string &name, Gtk::Box *box) {
 		}
 	});
 	ipUpdaterThreads.insert(std::make_pair(name, ipUpdaterThread));
+	// cout << "VmManager::_spawnIPThread exiting" << endl;
 }
 
 void VmManager::_resetTerminationFlagForVmThreads(const std::string &name) {
+	// cout << "VmManager::_resetTerminationFlagForVmThreads called" << endl;
 	auto itm = terminationMutexes.find(name);
 	if (itm == terminationMutexes.end()) {
 		std::cerr << "VmManager::_resetTerminationFlagForVmThreads: no mutex "
@@ -363,9 +538,11 @@ void VmManager::_resetTerminationFlagForVmThreads(const std::string &name) {
 					 "found for "
 				  << name << std::endl;
 	}
+	// cout << "VmManager::_resetTerminationFlagForVmThreads exiting" << endl;
 }
 
 void VmManager::_issueTerminationToVmThreads(const std::string &name) {
+	// cout << "VmManager::_issueTerminationToVmThreads called" << endl;
 	auto itm = terminationMutexes.find(name);
 	if (itm == terminationMutexes.end()) {
 		std::cerr << "VmManager::terminationIssueThread: no mutex found for "
@@ -382,9 +559,11 @@ void VmManager::_issueTerminationToVmThreads(const std::string &name) {
 		std::cerr << "VmManager::terminationIssueThread: no flag found for "
 				  << name << std::endl;
 	}
+	// cout << "VmManager::_issueTerminationToVmThreads exiting" << endl;
 }
 
 void VmManager::_reclaimMemory(const std::string &name) {
+	// cout << "VmManager::_reclaimMemory called" << endl;
 	auto ipThread = ipUpdaterThreads.find(name);
 	if (ipThread != ipUpdaterThreads.end()) {
 		if (ipThread->second != nullptr and ipThread->second->joinable()) {
@@ -414,4 +593,5 @@ void VmManager::_reclaimMemory(const std::string &name) {
 					 "found for "
 				  << name << std::endl;
 	}
+	// cout << "VmManager::_reclaimMemory exiting" << endl;
 }

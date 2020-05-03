@@ -29,9 +29,11 @@ bool Graph::on_draw(const Cairo::RefPtr<Cairo::Context>& cr) {
 	std::vector<int> vecToDraw = {};
 	if (mState == DRAW_HOLD) {
 		//		std::cout << "Graph::on_draw: Hold flag set" << std::endl;
+		std::lock_guard l(m);
 		vecToDraw = mPrevState;
 	} else if (mState == DRAW_START) {
 		//		std::cout << "Graph::on_draw: Draw flag set" << std::endl;
+		std::lock_guard l(m);
 		vecToDraw = mCurrState;
 		mState = DRAW_HOLD;
 	} else if (mState == DRAW_CLEAR) {
@@ -64,12 +66,14 @@ bool Graph::on_draw(const Cairo::RefPtr<Cairo::Context>& cr) {
 }
 
 void Graph::setVectorToDraw(const std::vector<int>& vec) {
+	std::lock_guard l(m);
 	mPrevState = std::move(mCurrState);
 	mCurrState = vec;
 	mState = DRAW_START;
 }
 void Graph::clear() {
+	std::lock_guard l(m);
 	mState = DRAW_CLEAR;
-	mPrevState={};
-	mCurrState={};
+	mPrevState = {};
+	mCurrState = {};
 }

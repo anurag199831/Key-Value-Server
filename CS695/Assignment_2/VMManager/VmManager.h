@@ -11,7 +11,6 @@
 #include <gtkmm/label.h>
 #include <gtkmm/window.h>
 
-#include <condition_variable>
 #include <thread>
 #include <unordered_map>
 
@@ -33,20 +32,15 @@ class VmManager : public Gtk::Window {
 	bool sanitizerThreadTerminationFlag;
 
 	void _fillViewsInGrid(Gtk::Grid *grid);
-
-	static void _getBoxWithWidgets(Gtk::Box *box);
-
-	static void _fillBoxWithName(Gtk::Box *box, const string &nameOfVM);
-
 	bool _fillBoxWithIP(Gtk::Box *box, const string &nameOfVM);
-
 	void _drawGraphInBox(Gtk::Box *box, const string &nameOfVm, bool clear);
-
 	void _setButtonsInBox(Gtk::Box *box, const string &nameOfVM);
-
 	void _powerOnImpl(const string &name, Gtk::Box *box);
-
 	void _shutdownImpl(const string &name);
+
+	// static functions
+	static void _getBoxWithWidgets(Gtk::Box *box);
+	static void _fillBoxWithName(Gtk::Box *box, const string &nameOfVM);
 
    public:
 	VmManager();
@@ -63,12 +57,13 @@ class VmManager : public Gtk::Window {
 	void on_shut_button_clicked(const std::string &name, Gtk::Button *start,
 								Gtk::Button *shut);
 
+	Gtk::Box *_getBoxFromGrid(const string &name);
 	void _spawnIPThread(const std::string &name, Gtk::Box *box);
 	void _spawnDrawingThread(const std::string &name, Gtk::Box *box);
 	void _issueTerminationToVmThreads(const std::string &name);
 	void _reclaimMemory(const string &name);
 	void _resetTerminationFlagForVmThreads(const string &name);
-	void _launchVmThreads(Gtk::Box *pBox, string &basicString);
+	void _launchVmThreads(Gtk::Box *pBox, const string &basicString);
 };
 
 #endif	// ASSIGNMENT_2_VMMANAGER_H

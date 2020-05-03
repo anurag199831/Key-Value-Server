@@ -15,11 +15,12 @@ VM::VM(const virConnectPtr &connPtr, const string &name) {
 	if (connPtr == NULL) throw invalid_argument("Invalid connection object\n");
 	vector<string> names = getAllDefinedDomainNames(connPtr);
 	if (find(names.begin(), names.end(), name) == names.end()) {
-		throw invalid_argument("VM::VM: no VM found with name " + name);
+		throw invalid_argument("VM::VM(): no VM found with name " + name +
+							   "\n");
 	}
 	domPtr = virDomainLookupByName(connPtr, name.c_str());
 	if (domPtr == NULL) {
-		throw runtime_error("VM::VM: call failed to virDomainLookupByName\n");
+		throw runtime_error("VM::VM(): call failed to virDomainLookupByName\n");
 	}
 }
 
@@ -30,15 +31,15 @@ VM::VM(const virConnectPtr &conn) {
 	virDomainPtr dom;
 	if (inactiveDomains.empty()) {
 		throw runtime_error(
-			"VM::VM: no inactive domain configuration "
-			"found");
+			"VM::VM(): no active domain configuration "
+			"found\n");
 	} else {
-		string name = inactiveDomains.at(0);
-		cout << "VM::VM: starting domain with name " << name << endl;
-		dom = virDomainLookupByName(conn, name.c_str());
+		cout << "VM::VM(): starting domain with name " << inactiveDomains.at(0)
+			 << endl;
+		dom = virDomainLookupByName(conn, inactiveDomains.at(0).c_str());
 		if (dom == NULL) {
 			throw runtime_error(
-				"VM::VM: call failed to virDomainLookupByName\n");
+				"VM::VM(): call failed to virDomainLookupByName\n");
 		}
 	}
 	domPtr = dom;
@@ -81,7 +82,8 @@ string VM::_getTypedParamValue(const virTypedParameterPtr &item) {
 			break;
 
 		case VIR_TYPED_PARAM_BOOLEAN:
-			if (item->value.b) str = "yes";
+			if (item->value.b)
+				str = "yes";
 			else
 				str = "no";
 			break;
@@ -104,7 +106,7 @@ unordered_map<string, string> VM::_getDomainStatRecordMap(
 	unordered_map<string, string> map;
 	string param;
 	if (record == NULL) {
-		cerr << "VM::getDomainStatRecord: NULL record passed" << endl;
+		cerr << "VM::_getDomainStatRecordMap: NULL record passed" << endl;
 		return map;
 	}
 	map["domain.name"] = string(virDomainGetName(record->dom));
@@ -157,7 +159,7 @@ unordered_map<string, string> VM::_getStatsforDomain(
 // Power on the VM.
 bool VM::powerOn() {
 	if (virDomainCreate(domPtr) < 0) {
-		cerr << "VM::powerOn: Unable to boot guest "
+		cerr << "VM::startAnyInactiveDomain: Unable to boot guest "
 				"configuration for "
 			 << getName() << endl;
 		return false;
@@ -184,16 +186,22 @@ string VM::getName() {
 
 // Returns a enum value of type virDomainState.
 long VM::_getVmStateFromMap(const unordered_map<string, string> &map) {
-	if (map.empty()) { return 0; }
+	if (map.empty()) {
+		return 0;
+	}
 	auto state = map.find("state.state");
-	if (state != map.end()) { return atol(state->second.c_str()); }
+	if (state != map.end()) {
+		return atol(state->second.c_str());
+	}
 	return 0;
 }
 
 // Returns the CPU utilization of the domain, given the stat map.
 // Returns 0 otherwise.
 double VM::_convertStatMapToUtil(const unordered_map<string, string> &map) {
-	if (map.empty()) { return 0; }
+	if (map.empty()) {
+		return 0;
+	}
 	size_t vcpu_current = 0, vcpu_maximum = 0;
 	auto n_curr = map.find("vcpu.current");
 	auto n_max = map.find("vcpu.maximum");
@@ -238,19 +246,15 @@ tuple<long, double> VM::getVmCpuUtil(const virConnectPtr &conn) {
 // Returns the mapping of hwaddr: nwaddrs as a map of (string,vector<string>).
 // Returns empty otherwise.
 unordered_map<string, vector<string>> VM::getInterfaceInfo() {
-	int max_retry = 0;
 	virDomainInterfacePtr *ifaces = NULL;
 	unordered_map<string, vector<string>> map;
 	int ifacesCount = virDomainInterfaceAddresses(
 		domPtr, &ifaces, VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE, 0);
-	while ((ifacesCount == -1 or ifacesCount == 0) and max_retry != 0) {
-		cout << "VM::getInterfaceInfo: "
-			 << "Retrying for " << 30 - max_retry << " time" << endl;
-		cout << "VM::getInterfaceInfo: Waiting for VM to start" << endl;
-		this_thread::sleep_for(chrono::seconds(2));
-		ifacesCount = virDomainInterfaceAddresses(
-			domPtr, &ifaces, VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE, 0);
-		max_retry--;
+	if ((ifacesCount == -1 or ifacesCount == 0)) {
+		cerr << "VM::getInterfaceInfo: Returned empty or call failed. Wait "
+				"for VM to start."
+			 << endl;
+		return map;
 	}
 	string hwaddr;
 	vector<string> naddrs;
@@ -275,7 +279,9 @@ string VM::getIp() {
 		cerr << "VM::getIp: VM::getInterfaceInfo returned empty" << endl;
 		return "";
 	}
-	for (auto &&i : m) { return i.second.front(); }
+	for (auto &&i : m) {
+		return i.second.front();
+	}
 	return "";
 }
 
@@ -323,8 +329,8 @@ bool VM::isPoweredOn() {
 // Returns empty vector if no inactive VMs found.
 vector<string> VM::getInactiveDomainNames(const virConnectPtr &conn) {
 	vector<string> vec;
-	virDomainPtr *doms;
-	int ret = virConnectListAllDomains(conn, &doms,
+	virDomainPtr *domains;
+	int ret = virConnectListAllDomains(conn, &domains,
 									   VIR_CONNECT_LIST_DOMAINS_INACTIVE);
 	if (ret < 0) {
 		cerr << "VM::getInactiveDomainNames: call to virConnectListAllDomains "
@@ -334,12 +340,14 @@ vector<string> VM::getInactiveDomainNames(const virConnectPtr &conn) {
 	}
 	string str;
 	for (int i = 0; i < ret; i++) {
-		const char *name = virDomainGetName(doms[i]);
+		const char *name = virDomainGetName(domains[i]);
 		str = string(name);
-		if (not str.empty()) { vec.emplace_back(str); }
-		virDomainFree(doms[i]);
+		if (not str.empty()) {
+			vec.emplace_back(str);
+		}
+		virDomainFree(domains[i]);
 	}
-	free(doms);
+	free(domains);
 	return vec;
 }
 
@@ -359,7 +367,9 @@ vector<string> VM::getAllDefinedDomainNames(const virConnectPtr &conn) {
 	for (int i = 0; i < ret; i++) {
 		const char *name = virDomainGetName(domains[i]);
 		str = string(name);
-		if (not str.empty()) { vec.emplace_back(str); }
+		if (not str.empty()) {
+			vec.emplace_back(str);
+		}
 		virDomainFree(domains[i]);
 	}
 	free(domains);
@@ -383,7 +393,9 @@ vector<string> VM::getAllActiveDomainNames(const virConnectPtr &conn) {
 	for (int i = 0; i < ret; i++) {
 		const char *name = virDomainGetName(domains[i]);
 		str = string(name);
-		if (not str.empty()) { vec.emplace_back(str); }
+		if (not str.empty()) {
+			vec.emplace_back(str);
+		}
 		virDomainFree(domains[i]);
 	}
 	free(domains);

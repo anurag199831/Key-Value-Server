@@ -13,20 +13,21 @@
 using namespace std;
 
 class VM {
-private:
+   private:
 	virDomainPtr domPtr;
 
 	// Inline private member functions
 	static inline unordered_map<string, string> _getDomainStatRecordMap(
-			const virDomainStatsRecordPtr& record);
+		const virDomainStatsRecordPtr& record);
 	static inline string _getTypedParamValue(const virTypedParameterPtr& item);
-	static double _convertStatMapToUtil(const unordered_map<string, string>& map);
+	static double _convertStatMapToUtil(
+		const unordered_map<string, string>& map);
 	static long _getVmStateFromMap(const unordered_map<string, string>& map);
 
 	// private member functions
 	unordered_map<string, string> _getStatsforDomain(const virConnectPtr& conn);
 
-public:
+   public:
 	VM(const virConnectPtr& connPtr, const string& name);
 	explicit VM(const virConnectPtr& connPtr);
 	~VM();
@@ -46,5 +47,4 @@ public:
 	static vector<string> getAllActiveDomainNames(virConnectPtr const& conn);
 };
 
-
-#endif //ASSIGNMENT_2_VM_H
+#endif	// ASSIGNMENT_2_VM_H
