@@ -48,7 +48,6 @@ VmManager::VmManager() : sanitizerThreadTerminationFlag(false) {
 						auto box = _getBoxFromGrid(name);
 						if (box != nullptr) {
 							_launchVmThreads(box, name);
-							mgr->notifyAboutServer();
 						} else {
 							std::cerr << "VmManager::sanitizerThread: no box "
 										 "widget found for "

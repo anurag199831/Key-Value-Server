@@ -80,7 +80,6 @@ Manager::Manager() : loadHandlerTerminationFlag(false) {
 							 << name << " due to overload." << endl;
 						powerOn(name);
 						startWatching(name);
-						notifyAboutServer();
 					}
 				} else if (not toShutdown.empty()) {
 					// Resetting all the stat data before shutting down a VM
