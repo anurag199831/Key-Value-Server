@@ -266,6 +266,7 @@ bool VmManager::_fillBoxWithIP(Gtk::Box *box, const string &nameOfVM,
 	if (GTK_IS_LABEL(name->gobj())) {
 		auto label = dynamic_cast<Gtk::Label *>(name);
 		if (update or flag) {
+			lock_guard lck(ipUpdateMutex)
 			label->set_text("IP: " + ip);
 		}
 	} else {
@@ -293,8 +294,6 @@ Gtk::Box *VmManager::_getBoxFromGrid(const string &nameOfVm) {
 					auto label = dynamic_cast<Gtk::Label *>(name);
 					auto name = label->get_text();
 					if (nameOfVm == name) {
-						// std::cout << "VmManager::_getBoxFromGrid: Box Found!"
-						// 		  << endl;
 						return outerBox;
 					}
 				} else {
