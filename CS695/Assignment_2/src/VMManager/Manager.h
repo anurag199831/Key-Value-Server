@@ -30,6 +30,7 @@ class Manager {
 	unordered_map<string, mutex*> threadTerminationLocks;
 	vector<thread*> threads;
 	const string ipFile = "server.dat";
+	mutex fileLock;
 
 	static const size_t LOAD_IDLE_THRESHOLD_TIME_IN_SECS = 60;
 	static const size_t LOAD_OVERLOAD_THRESHOLD_TIME_IN_SECS = 30;

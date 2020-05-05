@@ -110,7 +110,6 @@ Manager::Manager() : loadHandlerTerminationFlag(false) {
 			}
 			this_thread::sleep_for(chrono::seconds(1));
 			count++;
-			// cout << "Manager::LoadHandlerThread: count=" << count << endl;
 		}
 	});
 }
@@ -447,6 +446,7 @@ void Manager::shutdown(const string &nameOfVm) {
 
 // Notifies the client about the server.
 void Manager::notifyAboutServer() {
+	lock_guard lck(fileLock);
 	remove(ipFile.c_str());
 	for (auto &&i : domains) {
 		auto m = i.second->getInterfaceInfo();
@@ -474,6 +474,7 @@ bool Manager::_writeIpToFile(const string &ip) {
 
 // Deletes the ip from the file if present.
 bool Manager::_deleteIpFromFile(const string &ip) {
+	lock_guard lck(fileLock);
 	ifstream inputFile;
 	ofstream outFile;
 	inputFile.open(ipFile, ifstream::in);
