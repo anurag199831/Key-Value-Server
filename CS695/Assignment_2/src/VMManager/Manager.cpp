@@ -170,13 +170,6 @@ Manager::~Manager() {
 
 	virConnectClose(conn);
 	conn = NULL;
-
-	//	for (auto &&i : threadTerminationLocks) {
-	//		cout << "Manager::~Manager: " << i.first << " threadTermination
-	// mutex deleted"
-	//			 << endl;
-	//		delete i.second;
-	//	}
 }
 
 string Manager::startNewVm() {
@@ -546,7 +539,6 @@ void Manager::powerOn(const string &nameOfVm) {
 	if (not vm->isPoweredOn()) {
 		vm->powerOn();
 	}
-	notifyAboutServer();
 }
 
 // Returns a bool representing the power status of the VM.
@@ -595,6 +587,5 @@ vector<string> Manager::attachToTheRunningVms() {
 		startWatching(vm);
 		vec.emplace_back(vm);
 	}
-	notifyAboutServer();
 	return vec;
 }

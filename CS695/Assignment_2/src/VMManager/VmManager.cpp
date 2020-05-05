@@ -48,6 +48,7 @@ VmManager::VmManager() : sanitizerThreadTerminationFlag(false) {
 						auto box = _getBoxFromGrid(name);
 						if (box != nullptr) {
 							_launchVmThreads(box, name);
+							mgr->notifyAboutServer();
 						} else {
 							std::cerr << "VmManager::sanitizerThread: no box "
 										 "widget found for "
@@ -196,6 +197,7 @@ void VmManager::_fillViewsInGrid(Gtk::Grid *grid) {
 
 		_getBoxWithWidgets(outerBox);
 		_fillBoxWithName(outerBox, name);
+		_fillBoxWithIP(outerBox, name, true);
 		_setButtonsInBox(outerBox, name);
 		_fillBoxWithIP(outerBox, name);
 		grid->attach(*outerBox, pos % 2, pos / 2);
@@ -243,7 +245,8 @@ void VmManager::_fillBoxWithName(Gtk::Box *box, const string &nameOfVM) {
 	// cout << "VmManager::_fillBoxWithName exited for " << nameOfVM << endl;
 }
 
-bool VmManager::_fillBoxWithIP(Gtk::Box *box, const string &nameOfVM) {
+bool VmManager::_fillBoxWithIP(Gtk::Box *box, const string &nameOfVM,
+							   bool update) {
 	bool flag = false;
 	// cout << "VmManager::_fillBoxWithIP called for " << nameOfVM << endl;
 	string ip;
@@ -254,7 +257,8 @@ bool VmManager::_fillBoxWithIP(Gtk::Box *box, const string &nameOfVM) {
 	}
 	if (ip.empty()) {
 		ip = "--";
-	} else {
+	}
+	if (ip != "--") {
 		flag = true;
 	}
 
@@ -262,7 +266,9 @@ bool VmManager::_fillBoxWithIP(Gtk::Box *box, const string &nameOfVM) {
 	Gtk::Widget *name = children.at(2);
 	if (GTK_IS_LABEL(name->gobj())) {
 		auto label = dynamic_cast<Gtk::Label *>(name);
-		label->set_text("IP: " + ip);
+		if (update or flag) {
+			label->set_text("IP: " + ip);
+		}
 	} else {
 		std::cerr << "VmManager::__fillBoxWithIP: label not found as "
 					 "third element "
@@ -507,6 +513,7 @@ void VmManager::_spawnIPThread(const string &name, Gtk::Box *box) {
 						std::cout << "VmManager:ipUpdaterThread: IP updated. "
 									 "Terminating thread for "
 								  << name << "." << std::endl;
+						mgr->notifyAboutServer();
 						break;
 					}
 				}

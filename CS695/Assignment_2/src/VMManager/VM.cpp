@@ -47,7 +47,9 @@ VM::VM(const virConnectPtr &conn) {
 
 // Destructor for VM objects
 VM::~VM() {
-	virDomainFree(domPtr);
+	if (domPtr != NULL) {
+		virDomainFree(domPtr);
+	}
 	domPtr = NULL;
 }
 
@@ -180,7 +182,9 @@ bool VM::shutdown() {
 
 // Returns the name of the VM.
 string VM::getName() {
-	string name = virDomainGetName(domPtr);
+	auto s = virDomainGetName(domPtr);
+	string name;
+	if (s != NULL) name = string(s);
 	return name;
 }
 
@@ -341,13 +345,13 @@ vector<string> VM::getInactiveDomainNames(const virConnectPtr &conn) {
 	string str;
 	for (int i = 0; i < ret; i++) {
 		const char *name = virDomainGetName(domains[i]);
-		str = string(name);
+		if (name != NULL) str = string(name);
 		if (not str.empty()) {
 			vec.emplace_back(str);
 		}
 		virDomainFree(domains[i]);
 	}
-	free(domains);
+	// free(domains);
 	return vec;
 }
 
@@ -366,13 +370,13 @@ vector<string> VM::getAllDefinedDomainNames(const virConnectPtr &conn) {
 	string str;
 	for (int i = 0; i < ret; i++) {
 		const char *name = virDomainGetName(domains[i]);
-		str = string(name);
+		if (name != NULL) str = string(name);
 		if (not str.empty()) {
 			vec.emplace_back(str);
 		}
 		virDomainFree(domains[i]);
 	}
-	free(domains);
+	// free(domains);
 	return vec;
 }
 
@@ -392,12 +396,12 @@ vector<string> VM::getAllActiveDomainNames(const virConnectPtr &conn) {
 	string str;
 	for (int i = 0; i < ret; i++) {
 		const char *name = virDomainGetName(domains[i]);
-		str = string(name);
+		if (name != NULL) str = string(name);
 		if (not str.empty()) {
 			vec.emplace_back(str);
 		}
 		virDomainFree(domains[i]);
 	}
-	free(domains);
+	// free(domains);
 	return vec;
 }
