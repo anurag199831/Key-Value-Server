@@ -9,7 +9,7 @@
 #include "Graph.h"
 
 VmManager::VmManager() : sanitizerThreadTerminationFlag(false) {
-	std::cout << "VmManager::VmManager(): called" << endl;
+	// std::cout << "VmManager::VmManager(): called" << endl;
 
 	mgr = new Manager();
 	auto activeVms = mgr->attachToTheRunningVms();
@@ -123,7 +123,7 @@ VmManager::VmManager() : sanitizerThreadTerminationFlag(false) {
 					  << endl;
 		}
 	}
-	std::cout << "VmManager::VmManager(): called" << endl;
+	// std::cout << "VmManager::VmManager(): exiting" << endl;
 }
 
 VmManager::~VmManager() {
@@ -266,7 +266,7 @@ bool VmManager::_fillBoxWithIP(Gtk::Box *box, const string &nameOfVM,
 	if (GTK_IS_LABEL(name->gobj())) {
 		auto label = dynamic_cast<Gtk::Label *>(name);
 		if (update or flag) {
-			lock_guard lck(ipUpdateMutex)
+			lock_guard lck(ipUpdateMutex);
 			label->set_text("IP: " + ip);
 		}
 	} else {
@@ -294,6 +294,8 @@ Gtk::Box *VmManager::_getBoxFromGrid(const string &nameOfVm) {
 					auto label = dynamic_cast<Gtk::Label *>(name);
 					auto name = label->get_text();
 					if (nameOfVm == name) {
+						// std::cout << "VmManager::_getBoxFromGrid: Box Found!"
+						// 		  << endl;
 						return outerBox;
 					}
 				} else {

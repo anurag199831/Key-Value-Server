@@ -22,12 +22,12 @@ class VmManager : public Gtk::Window {
 
 	list<thread *> launchThreads;
 	unordered_map<string, thread *> ipUpdaterThreads;
-	mutex ipUpdateMutex;
-
 	unordered_map<string, thread *> drawingThreads;
 
 	unordered_map<string, bool> terminationFlags;
 	unordered_map<string, mutex *> terminationMutexes;
+
+	mutex ipUpdateMutex;
 
 	thread *sanitiserThread;
 	mutex sanitizerMutex;

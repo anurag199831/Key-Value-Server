@@ -110,6 +110,7 @@ Manager::Manager() : loadHandlerTerminationFlag(false) {
 			}
 			this_thread::sleep_for(chrono::seconds(1));
 			count++;
+			// cout << "Manager::LoadHandlerThread: count=" << count << endl;
 		}
 	});
 }
@@ -392,8 +393,8 @@ void Manager::_watch(string nameOfVm) {
 void Manager::startWatching(const string &nameOfVm) {
 	auto it = threadTerminationFlags.find(nameOfVm);
 	if (it == threadTerminationFlags.end()) {
-		cerr << "Manager::startWatching: no Vm with name " << nameOfVm
-			 << " found" << endl;
+		cerr << "Manager::startWatching: no VM with name " << nameOfVm
+			 << " found." << endl;
 		return;
 	} else {
 		it->second = false;
@@ -466,7 +467,6 @@ bool Manager::_writeIpToFile(const string &ip) {
 		cerr << "Manager::writeToFile: Error opening file " << ipFile << endl;
 		return false;
 	}
-
 	serverFile << ip << endl;
 	serverFile.close();
 	return true;

@@ -253,7 +253,7 @@ unordered_map<string, vector<string>> VM::getInterfaceInfo() {
 	virDomainInterfacePtr *ifaces = NULL;
 	unordered_map<string, vector<string>> map;
 	int ifacesCount = virDomainInterfaceAddresses(
-		domPtr, &ifaces, VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE, 0);
+		domPtr, &ifaces, VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_ARP, 0);
 	if ((ifacesCount == -1 or ifacesCount == 0)) {
 		cerr << "VM::getInterfaceInfo: Returned empty or call failed. Wait "
 				"for VM to start."
