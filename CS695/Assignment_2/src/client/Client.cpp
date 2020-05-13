@@ -17,21 +17,21 @@
 
 using namespace std;
 
-class Client
-{
-private:
+class Client {
+   private:
 	unordered_map<string, int> servers;
 	KVClientFormatter formatter;
-	const string serverFile =
-		"../debug-manager/server.dat";
+	const string serverFile = "../debug-manager/server.dat";
 
 	int _connectToServer(const string& ip, int port);
 	string __readFile(const string& file);
 	unordered_set<string> _getAddressesFromFile(const string& file);
 	void _updateServerConnections(const unordered_set<string>& ips);
 
-public:
+   public:
 	Client();
+	Client(const string& ipSource);
+
 	~Client();
 
 	void start(const string& inputFile, const string& outFile);
@@ -39,14 +39,14 @@ public:
 
 Client::Client() = default;
 
+Client::Client(const string& ipSource) : serverFile(ipSource + "/server.dat") {}
+
 Client::~Client() = default;
 
-int Client::_connectToServer(const string& ip, int port)
-{
+int Client::_connectToServer(const string& ip, int port) {
 	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	struct sockaddr_in addr = {0};
-	if (sockfd == -1)
-	{
+	if (sockfd == -1) {
 		cerr << "Client::_connectToServer: Network Error: Could not create "
 				"socket for ip "
 			 << ip << endl;
@@ -56,12 +56,9 @@ int Client::_connectToServer(const string& ip, int port)
 	addr.sin_port = htons(port);
 	addr.sin_addr.s_addr = inet_addr(ip.c_str());
 
-	if (connect(sockfd, (struct sockaddr*)&addr, sizeof(addr)) == 0)
-	{
+	if (connect(sockfd, (struct sockaddr*)&addr, sizeof(addr)) == 0) {
 		cout << "Connected to server\n";
-	}
-	else
-	{
+	} else {
 		cerr << "Network Error: Could not connect to " << ip << " on port "
 			 << port << endl;
 		return -1;
@@ -69,8 +66,7 @@ int Client::_connectToServer(const string& ip, int port)
 	return sockfd;
 }
 
-void Client::start(const string& inputFile, const string& outFile)
-{
+void Client::start(const string& inputFile, const string& outFile) {
 	int idleCount = 0;
 	string line;
 	int sockfd;
@@ -81,28 +77,24 @@ void Client::start(const string& inputFile, const string& outFile)
 	ifstream infile;
 
 	infile.open(inputFile, ifstream::in);
-	if (!infile.is_open())
-	{
+	if (!infile.is_open()) {
 		cerr << "Client::start: Error opening: " << inputFile << endl;
 		exit(EXIT_FAILURE);
 	}
 
 	ofstream outfile;
 	outfile.open(outFile, ofstream::out);
-	if (!outfile.is_open())
-	{
+	if (!outfile.is_open()) {
 		cerr << "Client::start: Error creating: " << outFile << endl;
 		infile.close();
 		exit(EXIT_FAILURE);
 	}
 
-	while (idleCount < MAX_IDLE_TIME)
-	{
+	while (idleCount < MAX_IDLE_TIME) {
 		request = 0;
 		auto ips = _getAddressesFromFile(serverFile);
 		_updateServerConnections(ips);
-		if (servers.empty())
-		{
+		if (servers.empty()) {
 			cout << "Client::start: No active servers found terminating after "
 				 << MAX_IDLE_TIME - idleCount << endl;
 			this_thread::sleep_for(chrono::seconds(2));
@@ -115,43 +107,34 @@ void Client::start(const string& inputFile, const string& outFile)
 					  return val.second;
 				  });
 		this_thread::sleep_for(chrono::seconds(1));
-		while ((infile >> line) and request < BATCH_SIZE)
-		{
+		while ((infile >> line) and request < BATCH_SIZE) {
 			request++;
 			sockfd = fds.at(request % fds.size());
 			idleCount = 0;
 
-			if (line.length() == 0)
-			{
+			if (line.length() == 0) {
 				continue;
 			}
 			vector<string> vec = formatter.tokenize(line);
 			if (vec.size() == 2 and
 				(vec.at(0) == "get" or vec.at(0) == "del" or
-				 vec.at(0) == "GET" or vec.at(0) == "DEL"))
-			{
+				 vec.at(0) == "GET" or vec.at(0) == "DEL")) {
 				line = formatter.convertToXML(vec.at(0), vec.at(1));
-			}
-			else if (vec.size() == 3 and
-					 (vec.at(0) == "put" or vec.at(0) == "PUT"))
-			{
+			} else if (vec.size() == 3 and
+					   (vec.at(0) == "put" or vec.at(0) == "PUT")) {
 				line = formatter.convertToXML(vec.at(0), vec.at(1), vec.at(2));
-			}
-			else
-			{
+			} else {
 				line = "garbage";
 			}
 			cout << "Sending data to server. Request: " << request << endl;
 			status = write(sockfd, line.c_str(), line.length());
-			if (status == -1)
-			{
+			if (status == -1) {
 				cout << "Client::start: Error sending data to server" << endl;
 				break;
 			}
 			memset(buffer, 0, MAX_BUFFER_SIZE);
 			status = read(sockfd, buffer, MAX_BUFFER_SIZE);
-			if (status == -1)
-			{
+			if (status == -1) {
 				cout << "Client::start: Error receiving data from server"
 					 << endl;
 				break;
@@ -159,52 +142,34 @@ void Client::start(const string& inputFile, const string& outFile)
 			cout << "Received data from server. Request: " << request
 				 << " fd: " << sockfd << endl;
 			line = string(buffer);
-			if (vec.at(0) == "get" or vec.at(0) == "GET")
-			{
+			if (vec.at(0) == "get" or vec.at(0) == "GET") {
 				vec = formatter.parseXML(line);
-				if (vec.size() == 2)
-				{
+				if (vec.size() == 2) {
 					outfile << vec.at(0) << "," << vec.at(1) << '\n';
-				}
-				else if (vec.size() == 1)
-				{
+				} else if (vec.size() == 1) {
 					outfile << vec.at(0) << '\n';
-				}
-				else
-				{
+				} else {
 					cerr << "Error parsing get XML\n";
 				}
-			}
-			else if (vec.size() != 0 and
-					 (vec.at(0) == "put" or vec.at(0) == "PUT"))
-			{
+			} else if (vec.size() != 0 and
+					   (vec.at(0) == "put" or vec.at(0) == "PUT")) {
 				vec = formatter.parseXML(line);
-				if (vec.size() == 1)
-				{
+				if (vec.size() == 1) {
 					outfile << vec.at(0) << '\n';
-				}
-				else
-				{
+				} else {
 					cerr << "Error parsing put XML\n";
 					break;
 				}
-			}
-			else if (vec.size() != 0 and
-					 (vec.at(0) == "del" or vec.at(0) == "DEL"))
-			{
+			} else if (vec.size() != 0 and
+					   (vec.at(0) == "del" or vec.at(0) == "DEL")) {
 				vec = formatter.parseXML(line);
-				if (vec.size() == 1)
-				{
+				if (vec.size() == 1) {
 					outfile << vec.at(0) << '\n';
-				}
-				else
-				{
+				} else {
 					cerr << "Error parsing put XML\n";
 					break;
 				}
-			}
-			else
-			{
+			} else {
 				cerr << "Error parsing put XML\n";
 				break;
 			}
@@ -215,18 +180,15 @@ void Client::start(const string& inputFile, const string& outFile)
 
 // Reads a files and returns a single string of the entire text.
 // Returns empty string in case of error.
-string Client::__readFile(const string& file)
-{
+string Client::__readFile(const string& file) {
 	ifstream serverFile;
 	string retStr = "", str; /* code */
 	serverFile.open(file, ifstream::in);
-	if (!serverFile.is_open())
-	{
+	if (!serverFile.is_open()) {
 		cerr << "Client::__readFile: Error opening file " << file << endl;
 		return retStr;
 	}
-	while ((serverFile >> str))
-	{
+	while ((serverFile >> str)) {
 		retStr += (str + '\n');
 	}
 	serverFile.close();
@@ -235,8 +197,7 @@ string Client::__readFile(const string& file)
 
 // Returns the vector of all IPs that the client can connect.
 // Returns empty vector in case of error.
-unordered_set<string> Client::_getAddressesFromFile(const string& file)
-{
+unordered_set<string> Client::_getAddressesFromFile(const string& file) {
 	unordered_set<string> s;
 
 	string text = __readFile(file);
@@ -245,18 +206,15 @@ unordered_set<string> Client::_getAddressesFromFile(const string& file)
 	stringstream ss(text);
 	string ip;
 
-	while ((ss >> ip))
-	{
-		if (formatter.validateIp(ip))
-		{
+	while ((ss >> ip)) {
+		if (formatter.validateIp(ip)) {
 			s.emplace(ip);
 		}
 	}
 	return s;
 }
 
-void Client::_updateServerConnections(const unordered_set<string>& ips)
-{
+void Client::_updateServerConnections(const unordered_set<string>& ips) {
 	int sockfd;
 	unordered_set<string> inactiveServers;
 	transform(servers.begin(), servers.end(),
@@ -265,31 +223,23 @@ void Client::_updateServerConnections(const unordered_set<string>& ips)
 				  return val.first;
 			  });
 
-	for (auto&& i : ips)
-	{
-		if (inactiveServers.find(i) == inactiveServers.end())
-		{
+	for (auto&& i : ips) {
+		if (inactiveServers.find(i) == inactiveServers.end()) {
 			sockfd = _connectToServer(i, DEFAULT_SERVER_PORT);
-			if (sockfd != -1)
-			{
+			if (sockfd != -1) {
 				cout << "Client::_updateServerConnections: Connected to " << i
 					 << endl;
 				servers[i] = sockfd;
-			}
-			else
-			{
+			} else {
 				cerr << "Client::_updateServerConnections: Error opening a "
 						"socket on "
 					 << i << endl;
 			}
-		}
-		else
-		{
+		} else {
 			inactiveServers.erase(i);
 		}
 	}
-	for (auto&& i : inactiveServers)
-	{
+	for (auto&& i : inactiveServers) {
 		cout << "Client::_updateServerConnections: Closing connection with "
 			 << i << endl;
 		sockfd = servers.at(i);
@@ -298,9 +248,43 @@ void Client::_updateServerConnections(const unordered_set<string>& ips)
 	}
 }
 
-int main(int argc, char const* argv[])
-{
-	Client client;
-	int random = rand() % 10;
-	client.start("input0.csv", "out" + to_string(random) + ".csv");
+void printUsage(const string& s) {
+	cout << "Usage: " << s << " -serverDir=<dir>" << endl;
+	exit(EXIT_SUCCESS);
+}
+
+int main(int argc, char const* argv[]) {
+	std::string arg;
+	size_t pos = 0;
+	std::string ipSource;
+
+	if (argc == 1) {
+	} else if (argc == 2) {
+		for (int i = 1; i < argc; i++) {
+			arg = std::string(argv[i]);
+			if (i == 1 and (pos = arg.find('=')) != std::string::npos) {
+				if (arg.substr(1, pos - 1) == "serverDir") {
+					ipSource = arg.substr(pos + 1, arg.length());
+					cout << ipSource << endl;
+				} else {
+					printUsage(std::string(argv[0]));
+				}
+			} else {
+				printUsage(std::string(argv[0]));
+			}
+		}
+	} else {
+		printUsage(std::string(argv[0]));
+	}
+	srand(time(0));
+
+	if (ipSource.empty()) {
+		Client client;
+		int random = rand() % 100;
+		client.start("input0.csv", "out" + to_string(random) + ".csv");
+	} else {
+		Client client(ipSource);
+		int random = rand() % 100;
+		client.start("input0.csv", "out" + to_string(random) + ".csv");
+	}
 }
