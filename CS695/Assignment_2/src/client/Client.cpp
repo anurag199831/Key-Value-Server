@@ -2,6 +2,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 
+#include <csignal>
 #include <fstream>
 #include <iostream>
 #include <thread>
@@ -21,29 +22,36 @@ class Client {
    private:
 	unordered_map<string, int> servers;
 	KVClientFormatter formatter;
-	const string serverFile = "../debug-manager/server.dat";
+	bool stopFlag = false;
+	string serverFile = "../manager/server.dat";
 
-	int _connectToServer(const string& ip, int port);
-	string __readFile(const string& file);
-	unordered_set<string> _getAddressesFromFile(const string& file);
-	void _updateServerConnections(const unordered_set<string>& ips);
+	static int _connectToServer(const string &ip, int port);
+
+	string __readFile(const string &file);
+
+	unordered_set<string> _getAddressesFromFile(const string &file);
+
+	void _updateServerConnections(const unordered_set<string> &ips);
 
    public:
 	Client();
-	Client(const string& ipSource);
+
+	explicit Client(const string &ipSource);
 
 	~Client();
 
-	void start(const string& inputFile, const string& outFile);
+	void start(const string &inputFile, const string &outFile);
+
+	void terminate();
 };
 
 Client::Client() = default;
 
-Client::Client(const string& ipSource) : serverFile(ipSource + "/server.dat") {}
+Client::Client(const string &ipSource) : serverFile(ipSource + "/server.dat") {}
 
 Client::~Client() = default;
 
-int Client::_connectToServer(const string& ip, int port) {
+int Client::_connectToServer(const string &ip, int port) {
 	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	struct sockaddr_in addr = {0};
 	if (sockfd == -1) {
@@ -56,7 +64,7 @@ int Client::_connectToServer(const string& ip, int port) {
 	addr.sin_port = htons(port);
 	addr.sin_addr.s_addr = inet_addr(ip.c_str());
 
-	if (connect(sockfd, (struct sockaddr*)&addr, sizeof(addr)) == 0) {
+	if (connect(sockfd, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
 		cout << "Connected to server\n";
 	} else {
 		cerr << "Network Error: Could not connect to " << ip << " on port "
@@ -66,7 +74,7 @@ int Client::_connectToServer(const string& ip, int port) {
 	return sockfd;
 }
 
-void Client::start(const string& inputFile, const string& outFile) {
+void Client::start(const string &inputFile, const string &outFile) {
 	int idleCount = 0;
 	string line;
 	int sockfd;
@@ -90,7 +98,7 @@ void Client::start(const string& inputFile, const string& outFile) {
 		exit(EXIT_FAILURE);
 	}
 
-	while (idleCount < MAX_IDLE_TIME) {
+	while (idleCount < MAX_IDLE_TIME and not stopFlag) {
 		request = 0;
 		auto ips = _getAddressesFromFile(serverFile);
 		_updateServerConnections(ips);
@@ -103,11 +111,11 @@ void Client::start(const string& inputFile, const string& outFile) {
 		}
 		vector<int> fds;
 		transform(servers.begin(), servers.end(), back_inserter(fds),
-				  [](const unordered_map<string, int>::value_type& val) {
+				  [](const unordered_map<string, int>::value_type &val) {
 					  return val.second;
 				  });
 		this_thread::sleep_for(chrono::seconds(1));
-		while ((infile >> line) and request < BATCH_SIZE) {
+		while ((infile >> line) and request < BATCH_SIZE and not stopFlag) {
 			request++;
 			sockfd = fds.at(request % fds.size());
 			idleCount = 0;
@@ -176,11 +184,17 @@ void Client::start(const string& inputFile, const string& outFile) {
 			line = "";
 		}
 	}
+	for (auto &&i : servers) {
+		cout << "Closing fd " << i.second << "\n";
+		close(i.second);
+	}
+	outfile.close();
+	infile.close();
 }
 
 // Reads a files and returns a single string of the entire text.
 // Returns empty string in case of error.
-string Client::__readFile(const string& file) {
+string Client::__readFile(const string &file) {
 	ifstream serverFile;
 	string retStr = "", str; /* code */
 	serverFile.open(file, ifstream::in);
@@ -197,7 +211,7 @@ string Client::__readFile(const string& file) {
 
 // Returns the vector of all IPs that the client can connect.
 // Returns empty vector in case of error.
-unordered_set<string> Client::_getAddressesFromFile(const string& file) {
+unordered_set<string> Client::_getAddressesFromFile(const string &file) {
 	unordered_set<string> s;
 
 	string text = __readFile(file);
@@ -214,16 +228,16 @@ unordered_set<string> Client::_getAddressesFromFile(const string& file) {
 	return s;
 }
 
-void Client::_updateServerConnections(const unordered_set<string>& ips) {
+void Client::_updateServerConnections(const unordered_set<string> &ips) {
 	int sockfd;
 	unordered_set<string> inactiveServers;
 	transform(servers.begin(), servers.end(),
 			  inserter(inactiveServers, inactiveServers.begin()),
-			  [](const unordered_map<string, int>::value_type& val) {
+			  [](const unordered_map<string, int>::value_type &val) {
 				  return val.first;
 			  });
 
-	for (auto&& i : ips) {
+	for (auto &&i : ips) {
 		if (inactiveServers.find(i) == inactiveServers.end()) {
 			sockfd = _connectToServer(i, DEFAULT_SERVER_PORT);
 			if (sockfd != -1) {
@@ -239,7 +253,7 @@ void Client::_updateServerConnections(const unordered_set<string>& ips) {
 			inactiveServers.erase(i);
 		}
 	}
-	for (auto&& i : inactiveServers) {
+	for (auto &&i : inactiveServers) {
 		cout << "Client::_updateServerConnections: Closing connection with "
 			 << i << endl;
 		sockfd = servers.at(i);
@@ -248,43 +262,65 @@ void Client::_updateServerConnections(const unordered_set<string>& ips) {
 	}
 }
 
-void printUsage(const string& s) {
-	cout << "Usage: " << s << " -serverDir=<dir>" << endl;
+void Client::terminate() { stopFlag = true; }
+// ============================================================================
+// =========================== MAIN IMPLEMENTATION ============================
+// ============================================================================
+
+Client *client;
+
+void handler(int x) { client->terminate(); }
+
+void printUsage(const string &s) {
+	cout << "Usage: " << s << " -serverDir=<dir> -input=<path to file>" << endl;
 	exit(EXIT_SUCCESS);
 }
 
-int main(int argc, char const* argv[]) {
-	std::string arg;
-	size_t pos = 0;
-	std::string ipSource;
+int main(int argc, char const *argv[]) {
+	signal(SIGINT, &handler);
 
-	if (argc == 1) {
-	} else if (argc == 2) {
-		for (int i = 1; i < argc; i++) {
-			arg = std::string(argv[i]);
-			if (i == 1 and (pos = arg.find('=')) != std::string::npos) {
-				if (arg.substr(1, pos - 1) == "serverDir") {
-					ipSource = arg.substr(pos + 1, arg.length());
-					cout << ipSource << endl;
-				} else {
-					printUsage(std::string(argv[0]));
-				}
-			} else {
-				printUsage(std::string(argv[0]));
-			}
+	if (argc == 2) {
+		if (string(argv[1]) == "help") {
+			printUsage(string(argv[0]));
 		}
-	} else {
-		printUsage(std::string(argv[0]));
 	}
-	srand(time(0));
+
+	string arg;
+	size_t pos = 0;
+	string ipSource, input = "input0.csv";
+	bool ipSourceFlag, inputFlag;
+	ipSourceFlag = inputFlag = false;
+
+	for (int i = 1; i < argc; i++) {
+		arg = string(argv[i]);
+		// cout << arg << endl;
+		if (not ipSourceFlag and (pos = arg.find('=')) != string::npos and
+			arg.substr(1, pos - 1) == "serverDir") {
+			ipSource = arg.substr(pos + 1, arg.length());
+			ipSourceFlag = true;
+		}
+		if (not inputFlag and (pos = arg.find('=')) != string::npos and
+			arg.substr(1, pos - 1) == "input") {
+			input = arg.substr(pos + 1, arg.length());
+			inputFlag = true;
+		}
+		if (inputFlag and ipSourceFlag) {
+			break;
+		}
+	}
+
+	cout << "IP source at: " << ipSource << endl;
+	cout << "Input: " << input << endl;
+	srand(time(NULL));
 
 	if (ipSource.empty()) {
-		Client client;
-		int random = rand() % 100;
-		client.start("input0.csv", "out" + to_string(random) + ".csv");
+		client = new Client();
 	} else {
-		Client client(ipSource);
-		int random = rand() % 100;
-		client.start("input0.csv", "out" + to_string(random) + ".csv");
+		client = new Client(ipSource);
 	}
+
+	int random = rand() % 100;
+	client->start(input, "out" + to_string(random) + ".csv");
+
+	delete client;
 }
