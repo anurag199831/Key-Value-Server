@@ -1,3 +1,0 @@
-/home/pranav/Repos/IITB/CS695/Assignment_2/build-client/CMakeFiles/rebuild_cache.dir
-/home/pranav/Repos/IITB/CS695/Assignment_2/build-client/CMakeFiles/edit_cache.dir
-/home/pranav/Repos/IITB/CS695/Assignment_2/build-client/CMakeFiles/Client.dir
